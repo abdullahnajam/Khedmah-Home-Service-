@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "459846251665",
+    "project_id": "rizek-11d2c",
+    "storage_bucket": "rizek-11d2c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:459846251665:android:984c085897f4c2040bbb30",
+        "android_client_info": {
+          "package_name": "com.app.rizek"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "459846251665-gb72doi9co9i9m9a1cdkrmr9cc02cq9m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.rizek",
+            "certificate_hash": "10078683f7dcd4cd8d017bbfa5552a12e0391294"
+          }
+        },
+        {
+          "client_id": "459846251665-a67frff51jsh5vo3ih9c37ub40uodm3b.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBei2nYErixuEXMNVnRt1Q3Y687m7mTXkM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "459846251665-a67frff51jsh5vo3ih9c37ub40uodm3b.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
