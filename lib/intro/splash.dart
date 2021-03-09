@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:rizek/intro/onboarding.dart';
 import 'package:rizek/main.dart';
 import 'package:rizek/data/values.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../navigator/bottom_navigation.dart';
 
 class SplashScreen extends StatefulWidget {
   final Color backgroundColor = Colors.white;
@@ -15,11 +17,16 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   final splashDelay = 5;
+  User user;
+
+  getCurrentUser()async{
+    user=await FirebaseAuth.instance.currentUser;
+  }
 
   @override
   void initState() {
     super.initState();
-
+    getCurrentUser();
     _loadWidget();
   }
 
@@ -29,8 +36,15 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void navigationPage() {
-    Navigator.pushReplacement(context,
-        MaterialPageRoute(builder: (BuildContext context) => OnBoarding()));
+    if(user!=null){
+      Navigator.pushReplacement(context,
+          MaterialPageRoute(builder: (BuildContext context) => BottomNavBar(user.uid,true)));
+    }
+    else{
+      Navigator.pushReplacement(context,
+          MaterialPageRoute(builder: (BuildContext context) => OnBoarding()));
+    }
+
   }
 
   @override

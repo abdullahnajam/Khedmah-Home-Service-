@@ -1,13 +1,32 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../data/values.dart';
+import '../../model/user.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 class EditProfile extends StatefulWidget {
+  UserData user;
+
+  EditProfile(this.user);
+
   @override
   _EditProfileState createState() => _EditProfileState();
 }
 
 class _EditProfileState extends State<EditProfile> {
+  final nameController=TextEditingController();
+  final surnameController=TextEditingController();
+  final phoneNumberController=TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    setState(() {
+      nameController.text=widget.user.name;
+      widget.user.surname=="none"?"nothing":surnameController.text=widget.user.surname;
+      phoneNumberController.text=widget.user.phoneNumber;
+    });
+  }
+
   bool isGender=true;
   @override
   Widget build(BuildContext context) {
@@ -64,6 +83,7 @@ class _EditProfileState extends State<EditProfile> {
                 Container(
 
                   child: TextField(
+                    controller: nameController,
                     style: TextStyle(fontWeight: FontWeight.w400,fontSize: 18),
                     decoration: InputDecoration(
                         contentPadding: EdgeInsets.only(bottom:-20.0),
@@ -80,6 +100,7 @@ class _EditProfileState extends State<EditProfile> {
                 Container(
 
                   child: TextField(
+                    controller: surnameController,
                     style: TextStyle(fontWeight: FontWeight.w400,fontSize: 18),
                     decoration: InputDecoration(
                         contentPadding: EdgeInsets.only(bottom:-20.0),
@@ -166,8 +187,8 @@ class _EditProfileState extends State<EditProfile> {
                             CountryCodePicker(
                               textStyle: TextStyle(fontSize: 20,fontWeight: FontWeight.w400),
                               onChanged: print,
-                              initialSelection: 'IT',
-                              favorite: ['+39','FR'],
+                              initialSelection: widget.user.countryCode,
+                              favorite: [widget.user.phoneCode,widget.user.countryCode],
                               // optional. Shows only country name and flag
                               showCountryOnly: false,
                               // optional. Shows only country name and flag when popup is closed.
@@ -178,6 +199,7 @@ class _EditProfileState extends State<EditProfile> {
                             SizedBox(width: 10,),
                             Expanded(
                               child: TextFormField(
+                                controller: phoneNumberController,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
                                   focusedBorder: InputBorder.none,
@@ -210,7 +232,7 @@ class _EditProfileState extends State<EditProfile> {
                 ),
                 SizedBox(height: 10,),
                 Text(
-                  "email address",
+                  widget.user.email,
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w300

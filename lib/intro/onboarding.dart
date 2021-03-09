@@ -1,14 +1,10 @@
 import 'dart:async';
-
 import 'package:country_code_picker/country_code_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:rizek/data/values.dart';
 import 'package:rizek/navigator/bottom_navigation.dart';
-import 'dart:convert';
-
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:sms_autofill/sms_autofill.dart';
+import 'otp.dart';
 
 
 class OnBoarding extends StatefulWidget {
@@ -20,14 +16,14 @@ class _OnBoardingPageState extends State<OnBoarding> {
 
   final controller = PageController();
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  String code='+92';
+  String flag='PK';
+
   final TextEditingController _phoneNumberController = TextEditingController();
-  final TextEditingController _smsController = TextEditingController();
-  String _verificationId;
-  final SmsAutoFill _autoFill = SmsAutoFill();
+
 
 
   @override
@@ -152,9 +148,12 @@ class _OnBoardingPageState extends State<OnBoarding> {
                           children: [
                             CountryCodePicker(
                               textStyle: TextStyle(fontSize: 20,fontWeight: FontWeight.w400),
-                              onChanged: print,
-                              initialSelection: 'IT',
-                              favorite: ['+39','FR'],
+                              onChanged: (value) {
+                                code = value.dialCode;
+                                flag=value.flagUri;
+                              },
+                              initialSelection: 'PK',
+                              favorite: ['+92','PK'],
                               // optional. Shows only country name and flag
                               showCountryOnly: false,
                               // optional. Shows only country name and flag when popup is closed.
@@ -191,8 +190,9 @@ class _OnBoardingPageState extends State<OnBoarding> {
                     child:  RaisedButton(
                       color: primaryColor,
                       onPressed: (){
-                        /*Navigator.push(context, new MaterialPageRoute(
-                            builder: (context) => Register()));*/
+                        String phoneNumber = "$code${_phoneNumberController.text}";
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (context) => OTPScreen(_phoneNumberController.text,code,flag)));
                       },
                       child: Text("Login / Sign Up",textAlign: TextAlign.center,style: TextStyle(color: Colors.white,fontWeight: FontWeight.w400,fontSize: 12),),
                     ),
@@ -205,7 +205,7 @@ class _OnBoardingPageState extends State<OnBoarding> {
                       color: Colors.grey[200],
                       onPressed: (){
                         Navigator.push(context, new MaterialPageRoute(
-                            builder: (context) => BottomNavBar()));
+                            builder: (context) => BottomNavBar(null,false)));
                       },
                       child: Text("Continue without account",textAlign: TextAlign.center,style: TextStyle(color: Colors.black,fontWeight: FontWeight.w600,fontSize: 12),),
                     ),

@@ -4,7 +4,10 @@ import '../screens/bottom_nav_screens/notification.dart';
 import '../screens/bottom_nav_screens/booking.dart';
 
 class BottomNavBar extends StatefulWidget {
-  BottomNavBar();
+  String uid;
+  bool isLogin;
+
+  BottomNavBar(this.uid,this.isLogin);
 
   @override
   _BottomNavigationState createState() => new _BottomNavigationState();
@@ -13,13 +16,19 @@ class BottomNavBar extends StatefulWidget {
 class _BottomNavigationState extends State<BottomNavBar>{
 
   int _currentIndex = 0;
-  final List<Widget> _children = [
-    Home(),
-    Booking(),
-    Notifications(),
 
-  ];
+  List<Widget> _children=[];
 
+  @override
+  void initState() {
+    super.initState();
+    _children = [
+      Home(widget.uid),
+      Booking(),
+      Notifications(),
+
+    ];
+  }
 
   void onTabTapped(int index) {
     setState(() {
