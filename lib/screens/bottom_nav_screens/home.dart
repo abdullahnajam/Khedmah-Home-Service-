@@ -5,6 +5,7 @@ import '../home/category_list.dart';
 import '../profile/profile.dart';
 import '../../model/offer.dart';
 import '../../model/discover.dart';
+import '../../model/home_service.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 class Home extends StatefulWidget {
@@ -37,6 +38,40 @@ class _HomeState extends State<Home> {
         );
         print("key ${offer.id}");
         list.add(offer);
+
+
+
+      }
+
+      //var KEYS= dataSnapshot.value.keys;
+      /*for(var value in dataSnapshot.value.values) {
+        Offer offer=Offer.fromJson(value);
+        //add id in offer
+        var data=KEYS[0];
+        offer.id=data;
+        print(offer.id);
+        list.add(offer);
+      }*/
+    });
+    return list;
+  }
+
+
+  Future<List<ServiceModel>> getHomeService() async {
+    List<ServiceModel> list=new List();
+    await databaseReference.child("service").once().then((DataSnapshot dataSnapshot){
+
+      var KEYS= dataSnapshot.value.keys;
+      var DATA=dataSnapshot.value;
+
+      for(var individualKey in KEYS){
+        ServiceModel serviceModel = new ServiceModel(
+            individualKey,
+            DATA[individualKey]['imgUrl'],
+            DATA[individualKey]['name']
+        );
+        print("key ${serviceModel.id}");
+        list.add(serviceModel);
 
 
 
@@ -194,8 +229,7 @@ class _HomeState extends State<Home> {
                             itemBuilder: (BuildContext context,int index){
                               return GestureDetector(
                                 onTap: (){
-                                  Navigator.push(context, new MaterialPageRoute(
-                                      builder: (context) => CategoryList()));
+
                                 },
                                 child: Container(
                                   margin: EdgeInsets.only(right: 10),
@@ -274,72 +308,69 @@ class _HomeState extends State<Home> {
                     textAlign: TextAlign.start,
                   ),
                 ),
-                Container(
-                  margin: EdgeInsets.all(15),
-                  height: 120,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      Container(
-                        width: 100,
-                        decoration: BoxDecoration(
-                          color: Color(0xfff1f6fa),
-                          border: Border.all(color: backgroundColor),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          children: [
-                            Expanded(
-                              flex: 8,
-                              child: Image.asset("assets/images/logo.png",width: 80,),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                "PCR Test",
-                                style: TextStyle(fontSize: 12,fontWeight: FontWeight.w300),
-                                textAlign: TextAlign.start,
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                      SizedBox(width: 10,),
-                      Container(
-                        width: 100,
-                        decoration: BoxDecoration(
-                          color: Color(0xfff1f6fa),
-                          border: Border.all(color: backgroundColor),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          children: [
-                            Expanded(
-                              flex: 8,
-                              child: Container(
-                                width: 50,
-                                margin: EdgeInsets.only(top: 22,bottom: 22),
-                                decoration: BoxDecoration(
-                                  color: Color(0xfff1f6fa),
-                                  border: Border.all(color: backgroundColor),
-                                  borderRadius: BorderRadius.circular(120),
+                FutureBuilder<List<ServiceModel>>(
+                  future: getHomeService(),
+                  builder: (context,snapshot){
+                    if(snapshot.hasData){
+                      if(snapshot.data!=null && snapshot.data.length>0){
+                        return Container(
+                          margin: EdgeInsets.all(15),
+                          height: 120,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: snapshot.data.length,
+                            itemBuilder: (BuildContext context,int index){
+                              return GestureDetector(
+                                onTap: (){
+                                  Navigator.push(context, new MaterialPageRoute(
+                                      builder: (context) => CategoryList(snapshot.data[index].id,snapshot.data[index].title)));
+                                },
+                                child: Container(
+                                  width: 100,
+                                  decoration: BoxDecoration(
+                                    color: Color(0xfff1f6fa),
+                                    border: Border.all(color: backgroundColor),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Expanded(
+                                        flex: 8,
+                                        child: Image.network(snapshot.data[index].image,width: 80,height: 50,),
+                                      ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          snapshot.data[index].title,
+                                          style: TextStyle(fontSize: 12,fontWeight: FontWeight.w300),
+                                          textAlign: TextAlign.start,
+                                        ),
+                                      )
+                                    ],
+                                  ),
                                 ),
-                                child: Center(child:Icon(Icons.arrow_forward)),
-                              )
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                "View All",
-                                style: TextStyle(fontSize: 12,fontWeight: FontWeight.w300),
-                                textAlign: TextAlign.start,
-                              ),
-                            )
-                          ],
-                        ),
-                      )
-                    ],
-                  ),
+                              );
+                            },
+
+                          ),
+                        );
+                      }
+                      else {
+                        return new Center(
+                          child: Container(
+                            child: Text("No Data Found"),
+                          ),
+                        );
+                      }
+                    }
+                    else if (snapshot.hasError) {
+                      return Text('Error : ${snapshot.error}');
+                    } else {
+                      return new Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+                  },
                 ),
                 Container(
                   margin: EdgeInsets.all(15),

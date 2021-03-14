@@ -204,8 +204,8 @@ class _OnBoardingPageState extends State<OnBoarding> {
                     child:  OutlineButton(
                       color: Colors.grey[200],
                       onPressed: (){
-                        Navigator.push(context, new MaterialPageRoute(
-                            builder: (context) => BottomNavBar(null,false)));
+                        /*Navigator.push(context, new MaterialPageRoute(
+                            builder: (context) => BottomNavBar(null,false)));*/
                       },
                       child: Text("Continue without account",textAlign: TextAlign.center,style: TextStyle(color: Colors.black,fontWeight: FontWeight.w600,fontSize: 12),),
                     ),

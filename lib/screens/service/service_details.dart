@@ -1,7 +1,16 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../data/values.dart';
+import '../../model/offeredServiceModel.dart';
+import '../../model/service_list.dart';
+import 'package:firebase_database/firebase_database.dart';
+import '../checkout_form/service_form_details.dart';
 class ServiceDetail extends StatefulWidget {
+  OfferedServiceModel offeredServiceModel;
+  String serviceId,categoryId;
+
+  ServiceDetail(this.serviceId,this.categoryId,this.offeredServiceModel);
+
   @override
   _ServiceDetailState createState() => _ServiceDetailState();
 }
@@ -10,7 +19,58 @@ class _ServiceDetailState extends State<ServiceDetail> {
   String detailtitle="Please read below applicable Terms & Conditions";
   String detail="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean vulputate ex a massa accumsan, quis volutpat massa iaculis. Etiam elit erat, ullamcorper ut ipsum quis, imperdiet ornare lacus. Fusce dictum enim leo. Aenean pulvinar dapibus dapibus. Cras commodo, nunc non scelerisque ultrices, massa turpis convallis velit, scelerisque commodo lorem nunc eget ante. Integer justo justo, sodales vitae molestie id, tincidunt nec neque. Morbi eget pharetra massa. Pellentesque bibendum velit vel est dapibus mollis.";
   IconData icon=Icons.keyboard_arrow_down;
+  final databaseReference = FirebaseDatabase.instance.reference();
   bool isExpanded=false;
+  bool isDataLoaded=false;
+  String serviceCount="Add Service";
+  int price=0;
+  int counter=0;
+  List<ServiceListModel> serviceList=[];
+  List<String> serviceCountList=[];
+  List<int> counterList=[];
+  List<bool> containerList=[];
+  List<IconData> iconList=[];
+
+  //List<ServiceListModel> otherList=new List();
+
+  getServiceList() async {
+    List<ServiceListModel> list=new List();
+    await databaseReference.child("service").child(widget.serviceId).child("categories").child(widget.categoryId).child("servicesOffered")
+        .child(widget.offeredServiceModel.id).child("servicelist").once().then((DataSnapshot dataSnapshot){
+
+      var KEYS= dataSnapshot.value.keys;
+      var DATA=dataSnapshot.value;
+
+      for(var individualKey in KEYS){
+        ServiceListModel serviceListModel = new ServiceListModel(
+            individualKey,
+            DATA[individualKey]['price'],
+          DATA[individualKey]['title']
+        );
+        print("key ${serviceListModel.title}");
+        list.add(serviceListModel);
+        serviceCountList.add("Add Service");
+        counterList.add(0);
+        containerList.add(false);
+        iconList.add(null);
+
+
+
+      }
+    });
+    setState(() {
+      isDataLoaded=true;
+      serviceList=list;
+    });
+    //return list;
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    getServiceList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +84,7 @@ class _ServiceDetailState extends State<ServiceDetail> {
               children: [
                 Stack(
                   children: [
-                    Image.asset("assets/images/placeholder.png",height: 200,width: double.maxFinite,fit: BoxFit.cover,),
+                    Image.network(widget.offeredServiceModel.image,height: 200,width: double.maxFinite,fit: BoxFit.cover,),
                     Container(
                       margin: EdgeInsets.only(top: 180),
                         width: double.maxFinite,
@@ -42,13 +102,13 @@ class _ServiceDetailState extends State<ServiceDetail> {
                           children: [
                             SizedBox(height: 10,),
                             Text(
-                              "PCR Test",
+                              widget.offeredServiceModel.name,
                               style: TextStyle(fontSize: 18,fontWeight: FontWeight.w700),
                               textAlign: TextAlign.start,
                             ),
                             SizedBox(height: 20,),
                             Text(
-                              isExpanded?detail:detailtitle,
+                              isExpanded?widget.offeredServiceModel.description:detailtitle,
                               style: TextStyle(fontSize: 13,fontWeight: FontWeight.w300),
                               textAlign: TextAlign.start,
                             ),
@@ -68,10 +128,11 @@ class _ServiceDetailState extends State<ServiceDetail> {
                               ),
                               alignment: Alignment.bottomRight,
                             ),
-                            ListView.builder(
-                              itemCount: 2,
+                            isDataLoaded?ListView.builder(
+                              itemCount: serviceList.length,
                               shrinkWrap: true,
                               itemBuilder: (BuildContext context,int index){
+
                                 return Container(
                                   decoration: BoxDecoration(
                                     border: Border(
@@ -88,12 +149,12 @@ class _ServiceDetailState extends State<ServiceDetail> {
                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                            children: [
                                              Text(
-                                               "Service Title",
+                                               serviceList[index].title,
                                                style: TextStyle(fontSize: 16,fontWeight: FontWeight.w600),
                                                textAlign: TextAlign.start,
                                              ),
                                              Text(
-                                               "price",
+                                               "AED ${serviceList[index].price}",
                                                style: TextStyle(fontSize: 12,fontWeight: FontWeight.w300),
                                                textAlign: TextAlign.start,
                                              ),
@@ -105,21 +166,63 @@ class _ServiceDetailState extends State<ServiceDetail> {
                                         child: Container(
                                           alignment: Alignment.center,
 
-                                          margin: EdgeInsets.only(left: 5,right: 5),
+                                          margin: EdgeInsets.only(left: 5,right: 5,top: 10,bottom: 10),
                                           child: Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
+                                              AnimatedContainer(
+                                                width: containerList[index] ? 50.0 : 0.0,
+                                                duration: const Duration(seconds: 2),
+                                                curve: Curves.fastOutSlowIn,
+                                                child: IconButton(
+                                                  icon: Icon(iconList[index]),
+                                                  onPressed: (){
+                                                    print("pp");
+                                                    setState(() {
+                                                      if(counterList[index]>1){
+                                                        counterList[index]--;
+                                                        price-=serviceList[index].price;
+                                                        serviceCountList[index]=counterList[index].toString();
+                                                      }
+                                                      else{
+                                                        iconList[index]=null;
+                                                        counterList[index]=0;
+                                                        price-=serviceList[index].price;
+                                                        containerList[index]=false;
+                                                        serviceCountList[index]="Add Service";
+                                                      }
+
+
+                                                    });
+                                                  },
+                                                ),
+                                              ),
                                               Container(
+                                                alignment:Alignment.center,
                                                 margin: EdgeInsets.only(left: 10,right: 10,top: 10,bottom: 10),
                                                 child: Text(
-                                                  "Add Service",
+                                                  serviceCountList[index],
                                                   style: TextStyle(fontSize: 15,fontWeight: FontWeight.w500),
                                                   textAlign: TextAlign.start,
                                                 ),
                                               ),
                                               Container(
                                                 alignment: Alignment.centerRight,
-                                                child: Icon(Icons.add),
+                                                child:IconButton(
+                                                  icon:  Icon(Icons.add),
+                                                  onPressed: (){
+                                                    setState(() {
+                                                      if(counterList[index]>=0){
+                                                        counterList[index]++;
+                                                        price+=serviceList[index].price;
+                                                        containerList[index]=true;
+                                                        iconList[index]=Icons.remove;
+                                                        serviceCountList[index]=counterList[index].toString();
+                                                      }
+
+                                                    });
+                                                  },
+                                                ),
 
                                                 decoration: BoxDecoration(
 
@@ -142,7 +245,7 @@ class _ServiceDetailState extends State<ServiceDetail> {
                                   ),
                                 );
                               },
-                            ),
+                            ):CircularProgressIndicator(),
 
                           ],
                         ),
@@ -151,7 +254,7 @@ class _ServiceDetailState extends State<ServiceDetail> {
                   ],
                 ),
                 SizedBox(height:30,),
-                Container(
+                /*Container(
                   padding: EdgeInsets.all(10),
                   color: Colors.white,
                   child: Column(
@@ -250,7 +353,7 @@ class _ServiceDetailState extends State<ServiceDetail> {
                       )
                     ],
                   ),
-                ),
+                ),*/
 
 
               ],
@@ -280,6 +383,64 @@ class _ServiceDetailState extends State<ServiceDetail> {
                 ),
               ),
             ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                height: 100,
+                color: Colors.white,
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: Container(
+                        margin: EdgeInsets.all(10),
+                        padding: EdgeInsets.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("AED ${price}",style: TextStyle(color: Colors.black,fontWeight: FontWeight.w700,fontSize: 18),),
+                            Text("Excluding VAT",style: TextStyle(color: Colors.grey,fontWeight: FontWeight.w300,fontSize: 13),),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Text("View Items",style: TextStyle(color: Colors.black,fontSize: 13),),
+                                Icon(Icons.keyboard_arrow_down,color: primaryColor,size: 20,),
+                              ],
+                            )
+                          ],
+                        ),
+                      )
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: GestureDetector(
+                        onTap: (){
+                          Navigator.push(context, new MaterialPageRoute(
+                              builder: (context) => ServiceFormDetail(price)));
+                        },
+                        child: Container(
+                          margin: EdgeInsets.all(10),
+                          padding: EdgeInsets.all(10),
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: primaryColor,
+                            borderRadius: BorderRadius.circular(10)
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text("Proceed",style: TextStyle(color: Colors.white,fontWeight: FontWeight.w500,fontSize: 16),),
+                              Icon(Icons.arrow_forward,color: Colors.white,size: 20,),
+                            ],
+                          )
+
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            )
           ],
         ),
       )
