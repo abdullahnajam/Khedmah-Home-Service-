@@ -136,9 +136,7 @@ class _HomeState extends State<Home> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.place,color: primaryColor,),
-                          Text("City Name",style: TextStyle(fontWeight: FontWeight.w800),),
-                          Icon(Icons.keyboard_arrow_down,color: primaryColor,),
+
                         ],
                       ),
                       GestureDetector(

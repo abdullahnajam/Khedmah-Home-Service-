@@ -34,9 +34,10 @@ dependencies:
   firebase_core: ^0.5.3
   toast: ^0.1.5
   url_launcher: ^5.7.10
-  flutter_audio_recorder: ^0.5.5
-  path_provider: ^1.6.24
-  audioplayers: ^0.17.0
+  date_format: ^1.0.9
+  flutter_google_places: ^0.2.6
+  google_maps_webservice: ^0.0.19
+  geocoder: ^0.2.1
   date_picker_timeline: ^1.2.0
   pinput: ^0.2.6
   step_progress_indicator: ^0.2.5+8
@@ -46,12 +47,16 @@ dependencies:
   video_thumbnail: ^0.2.5+1
 
 dev_dependencies:
+  flutter_launcher_icons: "^0.8.0"
   flutter_test:
     sdk: flutter
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
-
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo.png"
 # The following section is specific to Flutter.
 flutter:
 

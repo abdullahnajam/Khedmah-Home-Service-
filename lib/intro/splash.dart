@@ -56,7 +56,7 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Center(child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text("APP NAME",style: TextStyle(fontSize: 35,fontWeight: FontWeight.w500,color: Colors.white),)
+              Text("KHEDMAH",style: TextStyle(fontSize: 35,fontWeight: FontWeight.w500,color: Colors.white),)
             ],
           )),
           decoration: BoxDecoration(

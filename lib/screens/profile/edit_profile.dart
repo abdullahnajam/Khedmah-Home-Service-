@@ -1,5 +1,7 @@
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:toast/toast.dart';
 import '../../data/values.dart';
 import '../../model/user.dart';
 import 'package:country_code_picker/country_code_picker.dart';
@@ -56,7 +58,23 @@ class _EditProfileState extends State<EditProfile> {
                 Container(
                   margin: EdgeInsets.only(right: 15),
                   alignment: Alignment.centerRight,
-                  child: Text("Save",style: TextStyle(fontWeight: FontWeight.w400,fontSize: 14,color: primaryColor),),
+                  child: InkWell(
+                    onTap: (){
+                      final databaseReference = FirebaseDatabase.instance.reference();
+                      databaseReference.child("User").child(widget.user.id).update({
+                        'name': nameController.text,
+                        'surname': surnameController.text==""?'none':surnameController.text,
+                        'gender': isGender?'female':'male',
+
+                      }).then((value) => Toast.show("Saved", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP))
+                          .catchError((error, stackTrace) {
+                        print("inner: $error");
+                        // although `throw SecondError()` has the same effect.
+                        return Toast.show("Error : $error", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
+                      });
+                    },
+                    child: Text("Save",style: TextStyle(fontWeight: FontWeight.w400,fontSize: 14,color: primaryColor),),
+                  )
                 )
 
               ],

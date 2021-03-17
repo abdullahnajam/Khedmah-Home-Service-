@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rizek/screens/bottom_nav_screens/home.dart';
 import '../screens/bottom_nav_screens/notification.dart';
 import '../screens/bottom_nav_screens/booking.dart';
+import '../data/values.dart';
 
 class BottomNavBar extends StatefulWidget {
   String uid;
@@ -24,8 +25,8 @@ class _BottomNavigationState extends State<BottomNavBar>{
     super.initState();
     _children = [
       Home(widget.uid),
-      Booking(),
-      Notifications(),
+      Booking(widget.uid),
+      Notifications(widget.uid),
 
     ];
   }
@@ -44,8 +45,8 @@ class _BottomNavigationState extends State<BottomNavBar>{
     return new Scaffold(
       backgroundColor: Colors.grey[100],
       bottomNavigationBar: BottomNavigationBar(
-        unselectedItemColor: Color(0xffb2d0dc),
-        selectedItemColor: Color(0xff0ba9da),
+        unselectedItemColor: Color(0xffffd2ab),
+        selectedItemColor: primaryColor,
         onTap: onTabTapped, // new
         currentIndex: _currentIndex,
         items: [

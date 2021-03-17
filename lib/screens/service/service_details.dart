@@ -5,9 +5,13 @@ import '../../model/offeredServiceModel.dart';
 import '../../model/service_list.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../checkout_form/service_form_details.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:rizek/model/country_codes.dart';
+import '../../intro/otp.dart';
 class ServiceDetail extends StatefulWidget {
   OfferedServiceModel offeredServiceModel;
   String serviceId,categoryId;
+
 
   ServiceDetail(this.serviceId,this.categoryId,this.offeredServiceModel);
 
@@ -24,14 +28,55 @@ class _ServiceDetailState extends State<ServiceDetail> {
   bool isDataLoaded=false;
   String serviceCount="Add Service";
   int price=0;
+  bool cartPopUpScreen=false;
+  bool cartDetailPopUpScreen=false;
   int counter=0;
   List<ServiceListModel> serviceList=[];
   List<String> serviceCountList=[];
   List<int> counterList=[];
   List<bool> containerList=[];
   List<IconData> iconList=[];
+  List<ServiceListModel> selectedServicesList=[];
 
-  //List<ServiceListModel> otherList=new List();
+
+  bool first=true;
+  CountryCodes _countryCodes;
+
+  Future<List<CountryCodes>> getCodes() async {
+    List<CountryCodes> list=new List();
+    await databaseReference.child("countries").once().then((DataSnapshot dataSnapshot){
+
+      var KEYS= dataSnapshot.value.keys;
+      var DATA=dataSnapshot.value;
+
+      for(var individualKey in KEYS){
+        CountryCodes bookingModel = new CountryCodes(
+          individualKey,
+          DATA[individualKey]['code'],
+          DATA[individualKey]['name'],
+          DATA[individualKey]['image'],
+        );
+        list.add(bookingModel);
+
+
+      }
+
+    });
+    if(first){
+      setState(() {
+        _countryCodes=list[0];
+        first=false;
+      });
+    }
+
+    return list;
+  }
+
+  String code='+92';
+  String flag='PK';
+
+  final TextEditingController _phoneNumberController = TextEditingController();
+
 
   getServiceList() async {
     List<ServiceListModel> list=new List();
@@ -172,7 +217,7 @@ class _ServiceDetailState extends State<ServiceDetail> {
                                             children: [
                                               AnimatedContainer(
                                                 width: containerList[index] ? 50.0 : 0.0,
-                                                duration: const Duration(seconds: 2),
+                                                duration: const Duration(seconds: 1),
                                                 curve: Curves.fastOutSlowIn,
                                                 child: IconButton(
                                                   icon: Icon(iconList[index]),
@@ -189,6 +234,10 @@ class _ServiceDetailState extends State<ServiceDetail> {
                                                         counterList[index]=0;
                                                         price-=serviceList[index].price;
                                                         containerList[index]=false;
+                                                        if(price<=0){
+                                                          cartPopUpScreen=false;
+                                                        }
+                                                        selectedServicesList.removeWhere((element) => element.id==serviceList[index].id);
                                                         serviceCountList[index]="Add Service";
                                                       }
 
@@ -218,6 +267,12 @@ class _ServiceDetailState extends State<ServiceDetail> {
                                                         containerList[index]=true;
                                                         iconList[index]=Icons.remove;
                                                         serviceCountList[index]=counterList[index].toString();
+                                                        if(price>0){
+                                                          cartPopUpScreen=true;
+                                                        }
+                                                        if(counterList[index]==1){
+                                                          selectedServicesList.add(serviceList[index]);
+                                                        }
                                                       }
 
                                                     });
@@ -362,61 +417,303 @@ class _ServiceDetailState extends State<ServiceDetail> {
               alignment: Alignment.topLeft,
               child: Container(
                 margin: EdgeInsets.all(10),
-                child: Container(
-                  padding: EdgeInsets.all(5),
-                  margin: EdgeInsets.all(10),
-                  child: Icon(
-                    Icons.arrow_back,
-                    color: primaryColor,
+                child: GestureDetector(
+                  child: Container(
+                    padding: EdgeInsets.all(5),
+                    margin: EdgeInsets.all(10),
+                    child: Icon(
+                      Icons.arrow_back,
+                      color: primaryColor,
+                    ),
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey,
+                          offset: Offset(0.0, 1.0), //(x,y)
+                          blurRadius: 6.0,
+                        ),
+                      ],
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(120),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey,
-                        offset: Offset(0.0, 1.0), //(x,y)
-                        blurRadius: 6.0,
-                      ),
-                    ],
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(120),
-                  ),
-                ),
+                  onTap:()=>Navigator.pop(context),
+                )
               ),
             ),
             Align(
               alignment: Alignment.bottomCenter,
-              child: Container(
-                height: 100,
+              child: AnimatedContainer(
+                duration: const Duration(seconds: 1),
+                curve: Curves.fastOutSlowIn,
+                height: cartPopUpScreen?100:0,
                 color: Colors.white,
                 child: Row(
                   children: [
                     Expanded(
                       flex: 1,
-                      child: Container(
-                        margin: EdgeInsets.all(10),
-                        padding: EdgeInsets.all(10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("AED ${price}",style: TextStyle(color: Colors.black,fontWeight: FontWeight.w700,fontSize: 18),),
-                            Text("Excluding VAT",style: TextStyle(color: Colors.grey,fontWeight: FontWeight.w300,fontSize: 13),),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                Text("View Items",style: TextStyle(color: Colors.black,fontSize: 13),),
-                                Icon(Icons.keyboard_arrow_down,color: primaryColor,size: 20,),
-                              ],
-                            )
-                          ],
+                      child: GestureDetector(
+                        onTap: (){
+
+                          showDialog<void>(
+                            context: context,
+                            barrierDismissible: true, // user must tap button!
+                            builder: (BuildContext context) {
+                              return Card(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(30),
+                                    topRight: Radius.circular(30),
+                                  ),
+                                ),
+                                margin: EdgeInsets.only(
+                                  top: MediaQuery.of(context).size.height*0.6,
+                                ),
+                                child: Container(
+                                  padding: EdgeInsets.all(10),
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        height: MediaQuery.of(context).size.height*0.04,
+                                        child: Text("Your Basket",style: TextStyle(fontWeight: FontWeight.w700),),
+                                      ),
+                                      Container(
+                                        height: MediaQuery.of(context).size.height*0.15,
+                                        child: ListView.builder(
+                                          shrinkWrap: true,
+                                          itemCount: selectedServicesList.length,
+                                          itemBuilder: (BuildContext context,int index){
+                                            return Container(
+                                              margin: EdgeInsets.all(5),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Text(selectedServicesList[index].title,style: TextStyle(fontWeight: FontWeight.w400),),
+                                                  GestureDetector(
+                                                    child: Text("AED ${selectedServicesList[index].price}",style: TextStyle(fontWeight: FontWeight.w600),),
+                                                    onTap: null,
+                                                  )
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        child: Container(
+                                          height: MediaQuery.of(context).size.height*0.11,
+                                          margin: EdgeInsets.all(10),
+                                          padding: EdgeInsets.all(10),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text("AED ${price}",style: TextStyle(color: Colors.black,fontWeight: FontWeight.w700,fontSize: 18),),
+                                              Text("Excluding VAT",style: TextStyle(color: Colors.grey,fontWeight: FontWeight.w300,fontSize: 13),),
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.start,
+                                                children: [
+                                                  Text("Hide Items",style: TextStyle(color: Colors.black,fontSize: 13),),
+                                                  Icon(Icons.keyboard_arrow_down,color: primaryColor,size: 20,),
+                                                ],
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                        onTap: (){
+                                          Navigator.pop(context);
+                                        },
+                                      )
+
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        child: Container(
+                          margin: EdgeInsets.all(10),
+                          padding: EdgeInsets.all(10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("AED ${price}",style: TextStyle(color: Colors.black,fontWeight: FontWeight.w700,fontSize: 18),),
+                              Text("Excluding VAT",style: TextStyle(color: Colors.grey,fontWeight: FontWeight.w300,fontSize: 13),),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Text("View Items",style: TextStyle(color: Colors.black,fontSize: 13),),
+                                  Icon(Icons.keyboard_arrow_up,color: primaryColor,size: 20,),
+                                ],
+                              )
+                            ],
+                          ),
                         ),
                       )
                     ),
                     Expanded(
                       flex: 1,
                       child: GestureDetector(
-                        onTap: (){
-                          Navigator.push(context, new MaterialPageRoute(
-                              builder: (context) => ServiceFormDetail(price)));
+                        onTap: ()async{
+                          User user=await FirebaseAuth.instance.currentUser;
+                          if(user!=null){
+                            Navigator.push(context, new MaterialPageRoute(
+                                builder: (context) => ServiceFormDetail(price,selectedServicesList,widget.offeredServiceModel.id,widget.categoryId)));
+                          }
+                          else{
+                            showDialog<void>(
+                              context: context,
+                              barrierDismissible: true, // user must tap button!
+                              builder: (BuildContext context) {
+                                return Card(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(30),
+                                        topRight: Radius.circular(30),
+                                      ),
+                                    ),
+                                    margin: EdgeInsets.only(
+                                      top: MediaQuery.of(context).size.height*0.7,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                            padding:EdgeInsets.only(top: 10,left: 30,right: 30),
+                                            height: 100,
+                                            width: MediaQuery.of(context).size.width,
+                                            child:  Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    FutureBuilder<List<CountryCodes>>(
+                                                      future: getCodes(),
+                                                      builder: (context,snapshot){
+                                                        if(snapshot.hasData){
+                                                          if(snapshot.data!=null && snapshot.data.length>0){
+                                                            return GestureDetector(
+                                                              onTap: (){
+                                                                showDialog<void>(
+                                                                  context: context,
+                                                                  barrierDismissible: true, // user must tap button!
+                                                                  builder: (BuildContext context) {
+                                                                    return Card(
+
+                                                                      margin: EdgeInsets.only(
+                                                                        top: MediaQuery.of(context).size.height*0.1,
+                                                                        bottom: MediaQuery.of(context).size.height*0.1,
+                                                                        left: MediaQuery.of(context).size.width*0.1,
+                                                                        right: MediaQuery.of(context).size.width*0.1,
+                                                                      ),
+                                                                      child: Container(
+                                                                        padding: EdgeInsets.all(10),
+                                                                        child: ListView.builder(
+                                                                          itemCount: snapshot.data.length,
+                                                                          itemBuilder: (BuildContext context,int index){
+                                                                            return GestureDetector(
+                                                                              onTap: (){
+                                                                                setState(() {
+                                                                                  _countryCodes=snapshot.data[index];
+                                                                                  Navigator.pop(context);
+                                                                                });
+                                                                              },
+                                                                              child: Row(
+                                                                                children: [
+                                                                                  Expanded(
+                                                                                    flex: 3,
+                                                                                    child:  Row(
+                                                                                      children: [
+                                                                                        Image.network(snapshot.data[index].image,width: 30,height: 30,),
+                                                                                        SizedBox(width: 5,),
+                                                                                        Text(snapshot.data[index].code,style: TextStyle(fontSize: 18),),
+                                                                                      ],
+                                                                                    ),
+                                                                                  ),
+                                                                                  Expanded(
+                                                                                    flex: 7,
+                                                                                    child:  Text(snapshot.data[index].name,style: TextStyle(fontSize: 18),),
+                                                                                  )
+
+                                                                                ],
+                                                                              ),
+                                                                            );
+                                                                          },
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                  },
+                                                                );
+                                                              },
+                                                              child: Row(
+                                                                children: [
+                                                                  Image.network(_countryCodes.image,width: 30,height: 30,),
+                                                                  SizedBox(width: 5,),
+                                                                  Text(_countryCodes.code,style: TextStyle(fontSize: 18),)
+                                                                ],
+                                                              ),
+                                                            );
+                                                          }
+                                                          else {
+                                                            return new Container(
+                                                              child: Center(
+                                                                  child: Icon(Icons.warning,color: primaryColor,)
+                                                              ),
+                                                            );
+                                                          }
+                                                        }
+                                                        else if (snapshot.hasError) {
+                                                          return Text('Error : ${snapshot.error}');
+                                                        } else {
+                                                          return new Center(
+                                                            child: CircularProgressIndicator(),
+                                                          );
+                                                        }
+                                                      },
+                                                    ),
+                                                    SizedBox(width: 10,),
+                                                    Expanded(
+                                                      child: TextFormField(
+                                                        controller: _phoneNumberController,
+                                                        decoration: InputDecoration(
+                                                          border: InputBorder.none,
+                                                          focusedBorder: InputBorder.none,
+                                                          enabledBorder: InputBorder.none,
+                                                          errorBorder: InputBorder.none,
+                                                          disabledBorder: InputBorder.none,
+                                                          labelStyle: TextStyle(color: Colors.grey[500],fontSize: 20),
+                                                          labelText: 'Enter Mobile Number',
+                                                        ),
+                                                      ),
+                                                    )
+                                                  ],
+                                                ),
+                                                Divider(color: Colors.grey,)
+                                              ],
+                                            )
+
+                                        ),
+                                        Container(
+                                          padding:EdgeInsets.only(top: 10,bottom: 10,left: 30,right: 30),
+                                          height: 60,
+                                          width: MediaQuery.of(context).size.width,
+                                          child:  RaisedButton(
+                                            color: primaryColor,
+                                            onPressed: (){
+                                              String phoneNumber = "${_countryCodes.code}${_phoneNumberController.text}";
+                                              Navigator.of(context).push(MaterialPageRoute(
+                                                  builder: (context) => OTPScreen(_phoneNumberController.text,_countryCodes.code,_countryCodes.image)));
+                                            },
+                                            child: Text("Login / Sign Up",textAlign: TextAlign.center,style: TextStyle(color: Colors.white,fontWeight: FontWeight.w400,fontSize: 12),),
+                                          ),
+
+                                        ),
+                                      ],
+                                    )
+                                );
+                              },
+                            );
+                          }
+
                         },
                         child: Container(
                           margin: EdgeInsets.all(10),

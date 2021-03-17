@@ -31,13 +31,14 @@ class _ProfileState extends State<Profile> {
       user = UserData.fromJson(dataSnapshot.value);
       user.id = widget.uid;
     });
+
     return user;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: FutureBuilder<UserData>(
+        body: widget.uid!=null?FutureBuilder<UserData>(
           future: getUserData(),
           builder: (context, snapshot) {
             if (snapshot.hasData) {
@@ -133,7 +134,7 @@ class _ProfileState extends State<Profile> {
                     GestureDetector(
                       onTap: (){
                         Navigator.push(context, new MaterialPageRoute(
-                            builder: (context) => SavedAddress()));
+                            builder: (context) => SavedAddress(widget.uid)));
                       },
                       child: Container(
                         margin: EdgeInsets.only(bottom: 2),
@@ -330,6 +331,167 @@ class _ProfileState extends State<Profile> {
               );
             }
           },
+        ):
+        Container(
+          child: ListView(
+            children: [
+              Container(
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    bottom: BorderSide(width: 0.2, color: Colors.grey[500]),
+                  ),
+
+                ),
+                child: Stack(
+                  children: [
+                    GestureDetector(
+                      onTap: (){
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        margin: EdgeInsets.only(left: 15),
+                        alignment: Alignment.centerLeft,
+                        child: Icon(Icons.arrow_back,color: primaryColor,),
+                      ),
+                    ),
+                    Container(
+                      alignment: Alignment.center,
+                      child: Text("Profile",style: TextStyle(fontWeight: FontWeight.w700,fontSize: 13),),
+                    )
+
+                  ],
+                ),
+              ),
+
+              GestureDetector(
+                onTap: (){
+                  Navigator.push(context, new MaterialPageRoute(
+                      builder: (context) => OnBoarding()));
+                },
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 2),
+                  padding:EdgeInsets.all(15),
+                  color: Colors.white,
+                  child:Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Login/Sign Up",
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400
+                        ),
+                      ),
+                      Icon(Icons.chevron_right,color: primaryColor,),
+
+                    ],
+                  ),
+                ),
+              ),
+
+
+              GestureDetector(
+                onTap: ()async{
+                  await canLaunch(_url) ? await launch(_url) : throw 'Could not launch $_url';
+                },
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 2),
+                  padding:EdgeInsets.all(15),
+                  color: Colors.white,
+                  child:Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Privacy Policy",
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400
+                        ),
+                      ),
+                      Icon(Icons.chevron_right,color: primaryColor,),
+
+                    ],
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: ()async{
+                  await canLaunch(_url) ? await launch(_url) : throw 'Could not launch $_url';
+                },
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 2),
+                  padding:EdgeInsets.all(15),
+                  color: Colors.white,
+                  child:Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Terms and Condition",
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400
+                        ),
+                      ),
+                      Icon(Icons.chevron_right,color: primaryColor,),
+
+                    ],
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: (){
+                  Navigator.push(context, new MaterialPageRoute(
+                      builder: (context) => ContactUs()));
+                },
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 2),
+                  padding:EdgeInsets.all(15),
+                  color: Colors.white,
+                  child:Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Contact Us",
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400
+                        ),
+                      ),
+                      Icon(Icons.chevron_right,color: primaryColor,),
+
+                    ],
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: ()async{
+                  await canLaunch(_url) ? await launch(_url) : throw 'Could not launch $_url';
+                },
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 15),
+                  padding:EdgeInsets.all(15),
+                  color: Colors.white,
+                  child:Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "About Us",
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400
+                        ),
+                      ),
+                      Icon(Icons.chevron_right,color: primaryColor,),
+
+                    ],
+                  ),
+                ),
+              ),
+
+            ],
+          ),
         )
     );
   }

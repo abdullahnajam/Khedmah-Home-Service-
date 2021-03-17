@@ -5,6 +5,8 @@ import 'package:rizek/data/values.dart';
 import 'package:rizek/navigator/bottom_navigation.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'otp.dart';
+import '../model/country_codes.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 
 class OnBoarding extends StatefulWidget {
@@ -15,9 +17,41 @@ class OnBoarding extends StatefulWidget {
 class _OnBoardingPageState extends State<OnBoarding> {
 
   final controller = PageController();
+  bool first=true;
+  String countryImageUrl=null;
+  String countryCode=null;
+  CountryCodes _countryCodes;
+
+  final databaseReference = FirebaseDatabase.instance.reference();
+  Future<List<CountryCodes>> getCodes() async {
+    List<CountryCodes> list=new List();
+    await databaseReference.child("countries").once().then((DataSnapshot dataSnapshot){
+
+      var KEYS= dataSnapshot.value.keys;
+      var DATA=dataSnapshot.value;
+
+      for(var individualKey in KEYS){
+        CountryCodes bookingModel = new CountryCodes(
+            individualKey,
+            DATA[individualKey]['code'],
+            DATA[individualKey]['name'],
+            DATA[individualKey]['image'],
+        );
+        list.add(bookingModel);
 
 
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
+      }
+
+    });
+    if(first){
+      setState(() {
+        _countryCodes=list[0];
+        first=false;
+      });
+    }
+
+    return list;
+  }
 
   String code='+92';
   String flag='PK';
@@ -146,20 +180,91 @@ class _OnBoardingPageState extends State<OnBoarding> {
                       children: [
                         Row(
                           children: [
-                            CountryCodePicker(
-                              textStyle: TextStyle(fontSize: 20,fontWeight: FontWeight.w400),
-                              onChanged: (value) {
-                                code = value.dialCode;
-                                flag=value.flagUri;
+                            FutureBuilder<List<CountryCodes>>(
+                              future: getCodes(),
+                              builder: (context,snapshot){
+                                if(snapshot.hasData){
+                                  if(snapshot.data!=null && snapshot.data.length>0){
+                                    return GestureDetector(
+                                      onTap: (){
+                                        showDialog<void>(
+                                          context: context,
+                                          barrierDismissible: true, // user must tap button!
+                                          builder: (BuildContext context) {
+                                            return Card(
+                                              
+                                              margin: EdgeInsets.only(
+                                                  top: MediaQuery.of(context).size.height*0.1,
+                                                  bottom: MediaQuery.of(context).size.height*0.1,
+                                                  left: MediaQuery.of(context).size.width*0.1,
+                                                  right: MediaQuery.of(context).size.width*0.1,
+                                              ),
+                                              child: Container(
+                                                padding: EdgeInsets.all(10),
+                                                child: ListView.builder(
+                                                  itemCount: snapshot.data.length,
+                                                  itemBuilder: (BuildContext context,int index){
+                                                    return GestureDetector(
+                                                      onTap: (){
+                                                        setState(() {
+                                                          _countryCodes=snapshot.data[index];
+                                                          countryImageUrl=snapshot.data[index].image;
+                                                          print(countryImageUrl);
+                                                          Navigator.pop(context);
+                                                        });
+                                                      },
+                                                      child: Row(
+                                                        children: [
+                                                          Expanded(
+                                                            flex: 3,
+                                                            child:  Row(
+                                                              children: [
+                                                                Image.network(snapshot.data[index].image,width: 30,height: 30,),
+                                                                SizedBox(width: 5,),
+                                                                Text(snapshot.data[index].code,style: TextStyle(fontSize: 18),),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          Expanded(
+                                                            flex: 7,
+                                                            child:  Text(snapshot.data[index].name,style: TextStyle(fontSize: 18),),
+                                                          )
+
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      },
+                                      child: Row(
+                                        children: [
+                                          Image.network(_countryCodes.image,width: 30,height: 30,),
+                                          SizedBox(width: 5,),
+                                          Text(_countryCodes.code,style: TextStyle(fontSize: 18),)
+                                        ],
+                                      ),
+                                    );
+                                  }
+                                  else {
+                                    return new Container(
+                                      child: Center(
+                                          child: Icon(Icons.warning,color: primaryColor,)
+                                      ),
+                                    );
+                                  }
+                                }
+                                else if (snapshot.hasError) {
+                                  return Text('Error : ${snapshot.error}');
+                                } else {
+                                  return new Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
                               },
-                              initialSelection: 'PK',
-                              favorite: ['+92','PK'],
-                              // optional. Shows only country name and flag
-                              showCountryOnly: false,
-                              // optional. Shows only country name and flag when popup is closed.
-                              showOnlyCountryWhenClosed: false,
-                              // optional. aligns the flag and the Text left
-                              alignLeft: false,
                             ),
                             SizedBox(width: 10,),
                             Expanded(
@@ -190,9 +295,9 @@ class _OnBoardingPageState extends State<OnBoarding> {
                     child:  RaisedButton(
                       color: primaryColor,
                       onPressed: (){
-                        String phoneNumber = "$code${_phoneNumberController.text}";
+                        String phoneNumber = "${_countryCodes.code}${_phoneNumberController.text}";
                         Navigator.of(context).push(MaterialPageRoute(
-                            builder: (context) => OTPScreen(_phoneNumberController.text,code,flag)));
+                            builder: (context) => OTPScreen(_phoneNumberController.text,_countryCodes.code,_countryCodes.image)));
                       },
                       child: Text("Login / Sign Up",textAlign: TextAlign.center,style: TextStyle(color: Colors.white,fontWeight: FontWeight.w400,fontSize: 12),),
                     ),
@@ -204,8 +309,8 @@ class _OnBoardingPageState extends State<OnBoarding> {
                     child:  OutlineButton(
                       color: Colors.grey[200],
                       onPressed: (){
-                        /*Navigator.push(context, new MaterialPageRoute(
-                            builder: (context) => BottomNavBar(null,false)));*/
+                        Navigator.push(context, new MaterialPageRoute(
+                            builder: (context) => BottomNavBar(null,false)));
                       },
                       child: Text("Continue without account",textAlign: TextAlign.center,style: TextStyle(color: Colors.black,fontWeight: FontWeight.w600,fontSize: 12),),
                     ),

@@ -2,11 +2,16 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../data/values.dart';
 class Notifications extends StatefulWidget {
+  String uid;
+
+  Notifications(this.uid);
+
   @override
   _NotificationsState createState() => _NotificationsState();
 }
 
 class _NotificationsState extends State<Notifications> {
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -36,7 +41,7 @@ class _NotificationsState extends State<Notifications> {
               ],
             ),
           ),
-          Container(
+          /*Container(
             margin: EdgeInsets.all(15),
             child: Text(
               "Booking Updates",
@@ -162,7 +167,7 @@ class _NotificationsState extends State<Notifications> {
 
               ],
             ),
-          ),
+          ),*/
         ],
       ),
     );
