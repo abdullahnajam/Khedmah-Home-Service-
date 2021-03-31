@@ -18,6 +18,7 @@ class Booking extends StatefulWidget {
 
 class _BookingState extends State<Booking>  with SingleTickerProviderStateMixin{
   TabController _tabController;
+
   bool first=true;
   CountryCodes _countryCodes;
 
@@ -235,7 +236,7 @@ class _BookingState extends State<Booking>  with SingleTickerProviderStateMixin{
     List<BookingModel> list=[];
     User user=await FirebaseAuth.instance.currentUser;
     if(user!=null){
-      await databaseReference.child("booking").child(user.uid).once().then((DataSnapshot dataSnapshot){
+      await databaseReference.child("booking").once().then((DataSnapshot dataSnapshot){
 
         var KEYS= dataSnapshot.value.keys;
         var DATA=dataSnapshot.value;
@@ -249,9 +250,10 @@ class _BookingState extends State<Booking>  with SingleTickerProviderStateMixin{
               DATA[individualKey]['time'],
               DATA[individualKey]['status'],
               DATA[individualKey]['url'],
-              DATA[individualKey]['date']
+              DATA[individualKey]['date'],
+              DATA[individualKey]['user']
           );
-          if(bookingModel.status!="Completed"){
+          if(bookingModel.status!="Completed" && bookingModel.user==user.uid){
             print("key ${bookingModel.id}");
             list.add(bookingModel);
           }
@@ -281,9 +283,10 @@ class _BookingState extends State<Booking>  with SingleTickerProviderStateMixin{
               DATA[individualKey]['time'],
               DATA[individualKey]['status'],
               DATA[individualKey]['url'],
-              DATA[individualKey]['date']
+              DATA[individualKey]['date'],
+            DATA[individualKey]['user']
           );
-          if(bookingModel.status=="Completed"){
+          if(bookingModel.status=="Completed" && bookingModel.user==user.uid){
             print("key ${bookingModel.id}");
             list.add(bookingModel);
           }
@@ -311,11 +314,7 @@ class _BookingState extends State<Booking>  with SingleTickerProviderStateMixin{
               ),
               child: Stack(
                 children: [
-                  Container(
-                    margin: EdgeInsets.only(left: 15),
-                    alignment: Alignment.centerLeft,
-                    child: Icon(Icons.arrow_back,color: primaryColor,),
-                  ),
+
                   Container(
                     alignment: Alignment.center,
                     child: Text("Bookings",style: TextStyle(fontWeight: FontWeight.w700,fontSize: 13),),

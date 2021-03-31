@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:toast/toast.dart';
 import '../../data/values.dart';
 import '../../model/user.dart';
+import '../../model/country_codes.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 class EditProfile extends StatefulWidget {
   UserData user;
@@ -18,6 +19,43 @@ class _EditProfileState extends State<EditProfile> {
   final nameController=TextEditingController();
   final surnameController=TextEditingController();
   final phoneNumberController=TextEditingController();
+  bool first=true;
+  String countryImageUrl=null;
+  String countryCode=null;
+  CountryCodes _countryCodes;
+
+  final databaseReference = FirebaseDatabase.instance.reference();
+  Future<List<CountryCodes>> getCodes() async {
+    List<CountryCodes> list=new List();
+    await databaseReference.child("countries").once().then((DataSnapshot dataSnapshot){
+
+      var KEYS= dataSnapshot.value.keys;
+      var DATA=dataSnapshot.value;
+
+      for(var individualKey in KEYS){
+        CountryCodes bookingModel = new CountryCodes(
+          individualKey,
+          DATA[individualKey]['code'],
+          DATA[individualKey]['name'],
+          DATA[individualKey]['image'],
+        );
+        list.add(bookingModel);
+
+
+
+      }
+
+    });
+    for(int i=0;i<list.length;i++){
+      print(widget.user.phoneCode);
+      print(list[i].code);
+      if(widget.user.phoneCode==list[i].code){
+        _countryCodes=list[i];
+      }
+    }
+
+    return list;
+  }
 
   @override
   void initState() {
@@ -46,10 +84,13 @@ class _EditProfileState extends State<EditProfile> {
             ),
             child: Stack(
               children: [
-                Container(
-                  margin: EdgeInsets.only(left: 15),
-                  alignment: Alignment.centerLeft,
-                  child: Icon(Icons.arrow_back,color: primaryColor,),
+                GestureDetector(
+                  child: Container(
+                    margin: EdgeInsets.only(left: 15),
+                    alignment: Alignment.centerLeft,
+                    child: Icon(Icons.arrow_back,color: primaryColor,),
+                  ),
+                  onTap: ()=>Navigator.pop(context),
                 ),
                 Container(
                   alignment: Alignment.center,
@@ -202,17 +243,91 @@ class _EditProfileState extends State<EditProfile> {
                       children: [
                         Row(
                           children: [
-                            CountryCodePicker(
-                              textStyle: TextStyle(fontSize: 20,fontWeight: FontWeight.w400),
-                              onChanged: print,
-                              initialSelection: widget.user.countryCode,
-                              favorite: [widget.user.phoneCode,widget.user.countryCode],
-                              // optional. Shows only country name and flag
-                              showCountryOnly: false,
-                              // optional. Shows only country name and flag when popup is closed.
-                              showOnlyCountryWhenClosed: false,
-                              // optional. aligns the flag and the Text left
-                              alignLeft: false,
+                            FutureBuilder<List<CountryCodes>>(
+                              future: getCodes(),
+                              builder: (context,snapshot){
+                                if(snapshot.hasData){
+                                  if(snapshot.data!=null && snapshot.data.length>0){
+                                    return GestureDetector(
+                                      onTap: (){
+                                        showDialog<void>(
+                                          context: context,
+                                          barrierDismissible: true, // user must tap button!
+                                          builder: (BuildContext context) {
+                                            return Card(
+
+                                              margin: EdgeInsets.only(
+                                                top: MediaQuery.of(context).size.height*0.1,
+                                                bottom: MediaQuery.of(context).size.height*0.1,
+                                                left: MediaQuery.of(context).size.width*0.1,
+                                                right: MediaQuery.of(context).size.width*0.1,
+                                              ),
+                                              child: Container(
+                                                padding: EdgeInsets.all(10),
+                                                child: ListView.builder(
+                                                  itemCount: snapshot.data.length,
+                                                  itemBuilder: (BuildContext context,int index){
+                                                    return GestureDetector(
+                                                      onTap: (){
+                                                        setState(() {
+                                                          _countryCodes=snapshot.data[index];
+                                                          countryImageUrl=snapshot.data[index].image;
+                                                          print(countryImageUrl);
+                                                          Navigator.pop(context);
+                                                        });
+                                                      },
+                                                      child: Row(
+                                                        children: [
+                                                          Expanded(
+                                                            flex: 3,
+                                                            child:  Row(
+                                                              children: [
+                                                                Image.network(snapshot.data[index].image,width: 30,height: 30,),
+                                                                SizedBox(width: 5,),
+                                                                Text(snapshot.data[index].code,style: TextStyle(fontSize: 18),),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          Expanded(
+                                                            flex: 7,
+                                                            child:  Text(snapshot.data[index].name,style: TextStyle(fontSize: 18),),
+                                                          )
+
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      },
+                                      child: Row(
+                                        children: [
+                                          Image.network(_countryCodes.image,width: 30,height: 30,),
+                                          SizedBox(width: 5,),
+                                          Text(_countryCodes.code,style: TextStyle(fontSize: 18),)
+                                        ],
+                                      ),
+                                    );
+                                  }
+                                  else {
+                                    return new Container(
+                                      child: Center(
+                                          child: Icon(Icons.warning,color: primaryColor,)
+                                      ),
+                                    );
+                                  }
+                                }
+                                else if (snapshot.hasError) {
+                                  return Text('Error : ${snapshot.error}');
+                                } else {
+                                  return new Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
+                              },
                             ),
                             SizedBox(width: 10,),
                             Expanded(

@@ -1,5 +1,5 @@
 import 'dart:io';
-
+import '../../navigator/bottom_navigation.dart';
 import 'package:date_format/date_format.dart';
 import 'package:date_picker_timeline/date_picker_timeline.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,12 +13,20 @@ import '../../data/values.dart';
 import 'package:step_progress_indicator/step_progress_indicator.dart';
 import '../../model/service_list.dart';
 import '../../model/address.dart';
+import '../../model/user.dart';
+import '../../model/selected_service.dart';
+import 'package:google_map_location_picker/google_map_location_picker.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../profile/saved_address.dart';
+
 class ServiceFormDetail extends StatefulWidget {
   int price;
   List<ServiceListModel> selectedServicesList=[];
-  String offerId,catId;
+  String offerId,catId,serviceName;
+  String mainServiceId;
 
-  ServiceFormDetail(this.price,this.selectedServicesList,this.offerId,this.catId);
+
+  ServiceFormDetail(this.mainServiceId,this.price,this.selectedServicesList,this.offerId,this.serviceName,this.catId);
 
   @override
   _ServiceFormDetailState createState() => _ServiceFormDetailState();
@@ -30,16 +38,32 @@ class _ServiceFormDetailState extends State<ServiceFormDetail> {
   String location="Location";
   PageController controller = PageController();
   List<File> imageVideo=[];
+  List<List<File>> images=[];
+  List<List<String>> imageUrlList=[];
   List<String> imageVideoUrl=[];
   List<File> audio=[];
   User user;
+  UserData userData;
   getUser()async{
     user=await FirebaseAuth.instance.currentUser;
   }
+  getUserData() async {
+    User getUserData=await FirebaseAuth.instance.currentUser;
+    await databaseReference.child("User").child(getUserData.uid).once().then((
+        DataSnapshot dataSnapshot) {
+      userData = UserData.fromJson(dataSnapshot.value);
+    });
+
+  }
+  final _formKey = GlobalKey<FormState>();
+  final areaController=TextEditingController();
+  final nameController=TextEditingController();
+  final numberController=TextEditingController();
   final databaseReference = FirebaseDatabase.instance.reference();
   List<AddressModel> list=[];
   getUserAddress() async {
     User users=await FirebaseAuth.instance.currentUser;
+    list.clear();
     await databaseReference.child("address").child(users.uid).once().then((DataSnapshot dataSnapshot){
       var KEYS= dataSnapshot.value.keys;
       var DATA=dataSnapshot.value;
@@ -84,14 +108,29 @@ class _ServiceFormDetailState extends State<ServiceFormDetail> {
     }
   }
 
+  IconData icon=Icons.keyboard_arrow_down;
+  List<IconData> icons=[];
+  List<bool> isExpanded=[];
+  List<SelectedService> _selectedService=[];
+
 
   @override
   void initState() {
     super.initState();
     records = [];
     getUser();
+    getUserData();
     fillSelectedTimeList();
     getUserAddress();
+    for(int i=0;i<widget.selectedServicesList.length;i++){
+      setState(() {
+        icons.add(Icons.keyboard_arrow_down);
+        isExpanded.add(false);
+        images.add([]);
+        imageUrlList.add([]);
+        _controllers.add(new TextEditingController());
+      });
+    }
   }
 
   @override
@@ -102,37 +141,48 @@ class _ServiceFormDetailState extends State<ServiceFormDetail> {
     super.dispose();
   }
 
+
   ///NOTE: Only supported on Android & iOS
   ///Needs image_picker plugin {https://pub.dev/packages/image_picker}
   final picker = ImagePicker();
 
-  Future pickImageFromCamera() async {
+  Future pickImageFromCamera(int index) async {
     final pickedFile = await picker.getImage(source: ImageSource.camera);
 
     setState(() {
-      imageVideo.add(File(pickedFile.path));
+      //imageVideo.add(File(pickedFile.path));
+      //images[index].add(File(pickedFile.path));
     });
-    uploadImageToFirebase(context,File(pickedFile.path));
+    uploadImageToFirebase(index,context,File(pickedFile.path));
   }
-  Future pickImageFromGallery() async {
+  Future pickImageFromGallery(int index) async {
     final pickedFile = await picker.getImage(source: ImageSource.gallery);
 
     setState(() {
-      imageVideo.add(File(pickedFile.path));
+      //imageVideo.add(File(pickedFile.path));
+      //images[index].add(File(pickedFile.path));
     });
-    uploadImageToFirebase(context,File(pickedFile.path));
+    uploadImageToFirebase(index,context,File(pickedFile.path));
   }
   final descriptionController=TextEditingController();
-  Future uploadImageToFirebase(BuildContext context,File _imageFile) async {
+  List<TextEditingController> _controllers = new List();
+  Future uploadImageToFirebase(int i,BuildContext context,File _imageFile) async {
     String fileName = _imageFile.path;
     StorageReference firebaseStorageRef =
-    FirebaseStorage.instance.ref().child('uploads/');
+    FirebaseStorage.instance.ref().child('bookingPics/${DateTime.now().millisecond}');
     StorageUploadTask uploadTask = firebaseStorageRef.putFile(_imageFile);
     StorageTaskSnapshot taskSnapshot = await uploadTask.onComplete;
     taskSnapshot.ref.getDownloadURL().then(
-          (value) => imageVideoUrl.add(value),
+          (value)  {
+            imageUrlList[i].add(value);
+            setState(() {
+              images[i].add(_imageFile);
+            });
+            print(value);
+          },
     ).catchError((onError)=> print(onError));
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -175,7 +225,7 @@ class _ServiceFormDetailState extends State<ServiceFormDetail> {
                     margin: EdgeInsets.all(10),
                     //Step indicator to show the progress at the top of the screen
                     child: StepProgressIndicator(
-                      totalSteps: 2, //total time the screen will change when next button is pressed
+                      totalSteps: 3, //total time the screen will change when next button is pressed
                       currentStep: current,
                       size: 8,
                       padding: 4,
@@ -200,181 +250,189 @@ class _ServiceFormDetailState extends State<ServiceFormDetail> {
                 physics:new NeverScrollableScrollPhysics(), //Used to stop the swipe gesture
                 controller: controller,
                 children: <Widget>[
-                  //Form displayed in the app
-                  ListView(
-                    shrinkWrap: true,
-                    children: [
-                      ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: widget.selectedServicesList.length,
-                        itemBuilder: (BuildContext context, int index){
-                          return Container(
-                            padding: EdgeInsets.all(10),
-                            color: Colors.white,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("COVID-19 / PCR Test",style: TextStyle(color: Colors.grey,fontWeight: FontWeight.w300,fontSize: 14),),
-                                SizedBox(height: 5,),
-                                Text(widget.selectedServicesList[index].title,style: TextStyle(color: Colors.black,fontSize: 16),)
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                      SizedBox(height: 10,),
-                      Container(
-                        color: Colors.white,
-                        child: Column(
-                          children: [
-                            Container(
-
-                              color: Colors.white,
+                  SingleChildScrollView(
+                    physics: ScrollPhysics(),
+                    child: Column(
+                      children: [
+                        Text("Service Packages",style: TextStyle(color: Colors.grey,fontWeight: FontWeight.w300,fontSize: 14),),
+                        SizedBox(height: 5,),
+                        ListView.builder(
+                          physics: NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount: widget.selectedServicesList.length,
+                          itemBuilder: (BuildContext context, int index){
+                            return Container(
                               padding: EdgeInsets.all(10),
-                              child: Row(
+                              color: Colors.white,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    flex: 1,
-                                    child: Icon(Icons.edit,color: primaryColor,),
-                                  ),
-                                  Expanded(
-                                      flex: 9,
-                                      child: Text("Please add any specifically instructions you would like your hero to know",style: TextStyle(color: Colors.black,fontSize: 16),)
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Divider(color: Colors.grey[400],),
-                            Container(
-                              margin: EdgeInsets.all(10),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                      flex:9,
-                                    child: Container(
-                                      margin: EdgeInsets.all(10),
-                                      child: TextField(
-                                        controller: descriptionController,
-                                        maxLines: 4,
-                                        maxLength: 180,
-                                        decoration: InputDecoration(
-                                          enabledBorder:  new OutlineInputBorder(
-                                              borderSide: new BorderSide(color: Colors.grey)),
-                                          focusedBorder:  new OutlineInputBorder(
-                                              borderSide: new BorderSide(color: Colors.grey)),
-                                          border: new OutlineInputBorder(
-                                              borderSide: new BorderSide(color: Colors.grey)),
-                                        ),
-                                      ),
-                                    )
-                                  ),
-                                  Expanded(
-                                    flex:1,
-                                    child: Column(
+
+                                  Text(widget.selectedServicesList[index].title,style: TextStyle(color: Colors.black,fontSize: 16),),
+
+                                  Container(
+
+                                    color: Colors.white,
+                                    padding: EdgeInsets.all(5),
+                                    child: Row(
                                       children: [
-                                        GestureDetector(
-                                          onTap:(){
-
-                                          },
-                                          child: Icon(Icons.mic_none,color:primaryColor,size: 35,),
+                                        Expanded(
+                                          flex: 1,
+                                          child: Icon(Icons.edit,color: primaryColor,size: 20,),
                                         ),
-                                        SizedBox(height: 10,),
-                                        GestureDetector(
-                                          onTap:(){
-                                            print("presed");
-                                            showDialog<void>(
-                                              context: context,
-                                              barrierDismissible: true, // user must tap button!
-                                              builder: (BuildContext context) {
-                                                return Card(
-                                                  margin: EdgeInsets.only(top: MediaQuery.of(context).size.height*0.8),
-                                                  child: Container(
-                                                    child: Column(
-                                                      children: [
-                                                        Container(
-                                                          padding: EdgeInsets.all(10),
-                                                          child: InkWell(
-                                                            onTap: (){
-                                                              pickImageFromGallery();
-                                                            },
-                                                            child: Row(
-                                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                              children: [
-                                                                Text("Choose Photo from Gallery",style: TextStyle(fontSize:17),),
-                                                                Icon(Icons.arrow_forward),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        Container(
-                                                          padding: EdgeInsets.all(10),
-                                                          child: InkWell(
-                                                            onTap: (){
-                                                              pickImageFromCamera();
-                                                            },
-                                                            child: Row(
-                                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                              children: [
-                                                                Text("Choose Photo from Camera",style: TextStyle(fontSize:17),),
-                                                                Icon(Icons.arrow_forward),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        )
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
+                                        Expanded(
+                                            flex: 8,
+                                            child: Text("Please add any specifically instructions you would like your hero to know",style: TextStyle(color: Colors.black,fontSize: 12),)
+                                        ),
+                                        Expanded(
+                                            flex: 1,
+                                            child: GestureDetector(
+                                              child: Icon(icons[index],size: 20,),
+                                              onTap: (){
+                                                setState(() {
+                                                  if(isExpanded[index]){
+                                                    icons[index]=Icons.keyboard_arrow_down;
+                                                    isExpanded[index]=false;
+                                                  }
+                                                  else{
+                                                    icons[index]=Icons.keyboard_arrow_up;
+                                                    isExpanded[index]=true;
+                                                  }
+                                                });
                                               },
-                                            );
-
-                                          },
-                                          child: Icon(Icons.camera_alt_outlined,color:primaryColor,size: 35,),
+                                            )
                                         ),
                                       ],
                                     ),
                                   ),
+
+                                  isExpanded[index]?
+                                  Column(
+                                    children: [
+                                      Divider(color: Colors.grey[400],),
+                                      Container(
+                                        margin: EdgeInsets.all(5),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                                flex:9,
+                                                child: Container(
+                                                  margin: EdgeInsets.all(10),
+                                                  child: TextField(
+                                                    controller: _controllers[index],
+                                                    maxLines: 3,
+                                                    maxLength: 180,
+                                                    decoration: InputDecoration(
+                                                      enabledBorder:  new OutlineInputBorder(
+                                                          borderSide: new BorderSide(color: Colors.grey)),
+                                                      focusedBorder:  new OutlineInputBorder(
+                                                          borderSide: new BorderSide(color: Colors.grey)),
+                                                      border: new OutlineInputBorder(
+                                                          borderSide: new BorderSide(color: Colors.grey)),
+                                                    ),
+                                                  ),
+                                                )
+                                            ),
+                                            Expanded(
+                                              flex:1,
+                                              child: Column(
+                                                children: [
+                                                  GestureDetector(
+                                                    onTap:(){
+
+                                                    },
+                                                    child: Icon(Icons.mic_none,color:primaryColor,size: 35,),
+                                                  ),
+                                                  SizedBox(height: 10,),
+                                                  GestureDetector(
+                                                    onTap:(){
+                                                      print("presed");
+                                                      showDialog<void>(
+                                                        context: context,
+                                                        barrierDismissible: true, // user must tap button!
+                                                        builder: (BuildContext context) {
+                                                          return Card(
+                                                            margin: EdgeInsets.only(top: MediaQuery.of(context).size.height*0.8),
+                                                            child: Container(
+                                                              child: Column(
+                                                                children: [
+                                                                  Container(
+                                                                    padding: EdgeInsets.all(10),
+                                                                    child: InkWell(
+                                                                      onTap: (){
+                                                                        pickImageFromGallery(index);
+                                                                        Navigator.pop(context);
+                                                                      },
+                                                                      child: Row(
+                                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                        children: [
+                                                                          Text("Choose Photo from Gallery",style: TextStyle(fontSize:17),),
+                                                                          Icon(Icons.arrow_forward),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  Container(
+                                                                    padding: EdgeInsets.all(10),
+                                                                    child: InkWell(
+                                                                      onTap: (){
+                                                                        pickImageFromCamera(index);
+                                                                        Navigator.pop(context);
+                                                                      },
+                                                                      child: Row(
+                                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                        children: [
+                                                                          Text("Choose Photo from Camera",style: TextStyle(fontSize:17),),
+                                                                          Icon(Icons.arrow_forward),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                  )
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                      );
+
+                                                    },
+                                                    child: Icon(Icons.camera_alt_outlined,color:primaryColor,size: 35,),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      images[index].length>0?Container(
+                                        child: ListView.builder(
+                                          scrollDirection: Axis.horizontal,
+                                          itemCount: images[index].length,
+                                          itemBuilder: (BuildContext context,int imgIndex){
+                                            return Container(
+                                              margin: EdgeInsets.all(5),
+                                              child: Image.file(images[index][imgIndex],width: 100,height: 150,fit: BoxFit.cover,),
+                                            );
+                                          },
+                                        ),
+                                        height: 100,
+                                      ):Container()
+                                    ],
+                                  ):Container()
+
                                 ],
                               ),
-                            ),
-                            /*Container(
-                              height: 0,
-                              child: Column(
-                                children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: RecordListView(
-                                      records: records,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: RecorderView(
-                                      onSaved: _onRecordComplete,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )*/
-                          ],
-                        ),
-                      ),
-                      Container(
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: imageVideo.length,
-                          itemBuilder: (BuildContext context,int index){
-                            return Container(
-                              margin: EdgeInsets.all(5),
-                              child: Image.file(imageVideo[index],width: 100,height: 150,fit: BoxFit.cover,),
                             );
                           },
-                        ),
-                        height: 100,
-                      ),
-
-                    ],
+                        )
+                      ],
+                    ),
                   ),
+
+
+
+
+
                   ListView(
                     shrinkWrap: true,
                     children: [
@@ -754,8 +812,57 @@ class _ServiceFormDetailState extends State<ServiceFormDetail> {
                           ],
                         ),
                       ),
+
                     ],
                   ),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text("Payment Summary",style: TextStyle(fontSize: 18,fontWeight: FontWeight.w300),),
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        color: Colors.white,
+                        child: Column(
+                          children: [
+                            Container(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text("General",style: TextStyle(fontSize: 13,fontWeight: FontWeight.w200,color: Colors.grey),),
+                                      Text(widget.serviceName,style: TextStyle(fontSize: 16,fontWeight: FontWeight.w400),),
+                                    ],
+                                  )
+                                ],
+                              ),
+                              padding: EdgeInsets.only(top: 10,bottom: 10),
+                            ),
+                            Divider(color: Colors.grey,thickness: 0.4,),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text("Net Amount",style: TextStyle(fontSize: 14,fontWeight: FontWeight.w200,color: Colors.black),),
+                                Text("AED ${widget.price.toString()}",style: TextStyle(fontSize: 16,fontWeight: FontWeight.w700),),
+                              ],
+                            ),
+                            Divider(color: Colors.grey,thickness: 0.4,),
+                            Container(
+                              child: Row(
+                                children: [
+                                  Image.asset("assets/images/money.png",width: 30,height: 30,),
+                                  SizedBox(width: 10,),
+                                  Text("Cash",style: TextStyle(fontSize: 16,fontWeight: FontWeight.w700),),
+                                ],
+                              ),
+                              padding: EdgeInsets.only(top: 10,bottom: 10),
+                            )
+                          ],
+                        ),
+                      )
+                    ],
+                  )
                 ],
               ),
             ),
@@ -792,68 +899,118 @@ class _ServiceFormDetailState extends State<ServiceFormDetail> {
                       child: GestureDetector(
                         onTap: () {
                           if(current==1){
-                            if(descriptionController.text==""){
+                            bool isEmpty=false;
+                            for(int i=0;i<_controllers.length;i++){
+                              if(_controllers[i].text==""){
+                                isEmpty=true;
+                              }
+                            }
+                            if(isEmpty){
                               print("empty");
                               Toast.show("Description Box Is Empty", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
                             }
                             else{
                               setState(() {
-                                buttonText="Payment";
+                                //buttonText="Payment";
                                 current=2;
-                                controller.animateToPage(current,duration:Duration(seconds: 1),curve:Curves.ease);
+                                controller.animateToPage(1,duration:Duration(seconds: 1),curve:Curves.ease);
                               });
                             }
 
                           }
                           else if(current==2){
+                            if(selectedTime==null || location=="Location"){
+
+                              print("empty");
+                              Toast.show("Please fill all data", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
+                            }
+                            else{
+                              setState(() {
+                                buttonText="Payment";
+                                current=3;
+                                controller.animateToPage(2,duration:Duration(seconds: 1),curve:Curves.ease);
+                              });
+                            }
+                          }
+                          else if(current==3){
+                            print(current);
                             List<String> select=[];
                             for(int i=0;i<widget.selectedServicesList.length;i++){
                               select.add(widget.selectedServicesList[i].id);
                             }
                             String dateTime=formatDate(_dateTime, [dd, '/', mm, '/', yyyy]);
-                            if(descriptionController.text!="" && widget.selectedServicesList.length>0 && selectedTime!=null){
-                              final databaseReference = FirebaseDatabase.instance.reference();
-                              databaseReference.child("booking").child(user.uid).push().set({
-                                'location': location,
-                                'date': dateTime,
-                                'time': selectedTime,
-                                'description': descriptionController.text,
-                                'url': imageVideoUrl,
-                                'price': widget.price,
-                                'status': "Active",
-                                'service': select,
-                                'offerId': widget.offerId,
-                                'catId': widget.catId
+                            final bookingIdReference = FirebaseDatabase.instance.reference();
+                            bookingIdReference.child('booking_id').once().then((DataSnapshot bshot) {
+                              print(bshot.value);
+                              String bid="B${bshot.value}";
+                              int nextId=bshot.value;
+                              nextId++;
+                              for(int i=0;i<widget.selectedServicesList.length;i++){
+                                SelectedService selectedService=new SelectedService(
+                                  _controllers[i].text,
+                                  widget.selectedServicesList[i].title,
+                                    widget.selectedServicesList[i].id,
+                                    imageUrlList[i]
+                                );
+                                _selectedService.add(selectedService);
+                              }
+                              if(location!=null && widget.selectedServicesList.length>0 && selectedTime!=null){
+                                final databaseReference = FirebaseDatabase.instance.reference();
+                                databaseReference.child("booking").child(bid).set({
+                                  'location': location,
+                                  'user':user.uid,
+                                  'username':userData.name,
+                                  'date': dateTime,
+                                  //'serivceDetails':_selectedService,
+                                  'servicename':widget.serviceName,
+                                  'time': selectedTime,
+                                  'description': descriptionController.text,
+                                  //'url': imageVideoUrl,
+                                  'price': widget.price,
+                                  'status': "Active",
+                                  'service': select,
+                                  'serviceId':widget.mainServiceId,
+                                  'offerId': widget.offerId,
+                                  'catId': widget.catId
 
-                              }).then((value) => Toast.show("Submitted", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP))
-                              .catchError((error, stackTrace) {
-                                print("inner: $error");
-                                // although `throw SecondError()` has the same effect.
-                                return Toast.show("Error : $error", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
-                              });
+                                }).then((value) {
+                                  Toast.show("Submitted", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
+                                  for(int i=0;i<widget.selectedServicesList.length;i++){
 
-                            }
-                            else{
-                              Toast.show("Please Add All fields", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
-                            }
-                          }
-                          /*if(current<=2){
-                            setState(() {
-                              print(current);
-                              current++;
-                              if(current==2){
-                                buttonText="Finish";
+                                    databaseReference.child("booking").child(bid).child('serviceSelected').push().set({
+                                      'description': _controllers[i].text,
+                                      'serviceName':widget.selectedServicesList[i].title,
+                                      'serviceId':widget.selectedServicesList[i].id,
+                                      'imgUrl':imageUrlList[i],
+                                    }).then((value) {
+                                      bookingIdReference.child('booking_id').set(nextId);
+                                      Navigator.push(context, new MaterialPageRoute(
+                                          builder: (context) => BottomNavBar(user.uid,true)));
+                                    }).catchError((onError){
+                                      FirebaseDatabase.instance.reference()
+                                          .child('booking')
+                                          .child(bid)
+                                          .remove();
+                                    });
 
+                                  }
+
+
+                                })
+                                    .catchError((error, stackTrace) {
+                                  print("inner: $error");
+                                  // although `throw SecondError()` has the same effect.
+                                  return Toast.show("Error : $error", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
+                                });
 
                               }
                               else{
-                                buttonText="Proceed";
+                                Toast.show("Please Add All fields", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
                               }
                             });
 
-                            //this moves the next form into the screen with animation
+                          }
 
-                          }*/
 
                         },
                         child: Container(
@@ -888,31 +1045,287 @@ class _ServiceFormDetailState extends State<ServiceFormDetail> {
                 duration: const Duration(seconds: 1),
                 curve: Curves.fastOutSlowIn,
                 color: Colors.white,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: list.length,
-                  itemBuilder: (BuildContext context,int index){
-                    return GestureDetector(
-                      child: Container(
-                        margin: EdgeInsets.only(top: 5,bottom: 5),
-                        color: Colors.white,
-                        child: Row(
-                          children: [
-                            Icon(Icons.place,color: primaryColor,),
-                            Expanded(
-                              child: Text(list[index].addressLine),
-                            )
-                          ],
-                        ),
+                child: list.length>0?
+                ListView(
+                  
+                  children: [
+                    Container(
+                      alignment: Alignment.center,
+                      margin: EdgeInsets.all(5),
+                      child: InkWell(
+                        onTap: ()async{
+                          LocationResult result = await showLocationPicker(
+                            context,
+                            kGoogleApiKey,
+
+                          );
+                          print("result = ${result}");
+                          if(result!=null){
+                            showDialog<void>(
+                              context: context,
+                              barrierDismissible: true, // user must tap button!
+                              builder: (BuildContext context) {
+                                return Card(
+
+                                  margin: EdgeInsets.only(
+                                    top: MediaQuery.of(context).size.height*0.56,
+                                  ),
+                                  child: Form(
+                                      key: _formKey,
+                                      child: Container(
+                                        margin: EdgeInsets.all(10),
+                                        child: ListView(
+                                          shrinkWrap: true,
+                                          children: [
+                                            Container(
+                                              alignment: Alignment.center,
+                                              margin: EdgeInsets.all(5),
+                                              child: Text(result.address,style: TextStyle(fontSize: 18,fontWeight: FontWeight.w700),textAlign: TextAlign.center,),
+                                            ),
+                                            TextFormField(
+                                              controller: areaController,
+                                              decoration: InputDecoration(
+                                                  hintText: "Area"
+                                              ),
+                                              // The validator receives the text that the user has entered.
+                                              validator: (value) {
+                                                if (value.isEmpty) {
+                                                  return 'Enter Area';
+                                                }
+                                                return null;
+                                              },
+                                            ),
+                                            SizedBox(height: 10,),
+                                            TextFormField(
+                                              controller: nameController,
+                                              decoration: InputDecoration(
+                                                  hintText: "Building/Villa Name"
+                                              ),
+                                              // The validator receives the text that the user has entered.
+                                              validator: (value) {
+                                                if (value.isEmpty) {
+                                                  return 'Enter Name';
+                                                }
+                                                return null;
+                                              },
+                                            ),
+                                            SizedBox(height: 10,),
+                                            TextFormField(
+                                              controller: numberController,
+                                              decoration: InputDecoration(
+                                                  hintText: "Flat / Villa No"
+                                              ),
+                                              // The validator receives the text that the user has entered.
+                                              validator: (value) {
+                                                if (value.isEmpty) {
+                                                  return 'Enter number';
+                                                }
+                                                return null;
+                                              },
+                                            ),
+                                            SizedBox(height: 10,),
+                                            Container(
+                                              padding:EdgeInsets.only(top: 10,bottom: 10,left: 30,right: 30),
+                                              height: 60,
+                                              width: MediaQuery.of(context).size.width,
+                                              child:  RaisedButton(
+                                                color: primaryColor,
+                                                onPressed: (){
+                                                  if (_formKey.currentState.validate()) {
+                                                    final databaseReference = FirebaseDatabase.instance.reference();
+                                                    databaseReference.child("address").child(user.uid).push().set({
+                                                      'addressLine': "${numberController.text}, ${nameController.text}, ${result.address}",
+                                                      'area': areaController.text,
+                                                      'flatNo': numberController.text,
+                                                      'building': nameController.text,
+                                                      'lat': result.latLng.latitude,
+                                                      'long': result.latLng.longitude,
+
+
+                                                    }).then((value) {
+                                                      Toast.show("Saved", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
+                                                      getUserAddress();
+                                                      Navigator.pop(context);
+                                                      setState(() {
+                                                        //locationContainer=
+                                                      });
+
+                                                    })
+                                                        .catchError((error, stackTrace) {
+                                                      print("inner: $error");
+                                                      // although `throw SecondError()` has the same effect.
+                                                      return Toast.show("Error : $error", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
+                                                    });
+                                                  }
+                                                },
+                                                child: Text("Save Address",textAlign: TextAlign.center,style: TextStyle(color: Colors.white,fontWeight: FontWeight.w400,fontSize: 12),),
+                                              ),
+
+                                            ),
+
+                                          ],
+                                        ),
+                                      )
+                                  ),
+                                );
+                              },
+                            );
+                          }
+                        },
+                        child: Text("Add Location",style: TextStyle(color: primaryColor),),
                       ),
-                      onTap: (){
-                        setState(() {
-                          locationContainer=false;
-                          location=list[index].addressLine;
-                        });
+                    ),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: list.length,
+                      itemBuilder: (BuildContext context,int index){
+                        return GestureDetector(
+                          child: Container(
+                            margin: EdgeInsets.only(top: 5,bottom: 5),
+                            color: Colors.white,
+                            child: Row(
+                              children: [
+                                Icon(Icons.place,color: primaryColor,),
+                                Expanded(
+                                  child: Text(list[index].addressLine),
+                                )
+                              ],
+                            ),
+                          ),
+                          onTap: (){
+                            setState(() {
+                              locationContainer=false;
+                              location=list[index].addressLine;
+                            });
+                          },
+                        );
                       },
-                    );
-                  },
+                    )
+                  ],
+                ):
+                Center(
+                  child: InkWell(
+                    onTap: ()async{
+                      LocationResult result = await showLocationPicker(
+                        context,
+                        kGoogleApiKey,
+
+                      );
+                      print("result = ${result}");
+                      if(result!=null){
+                        showDialog<void>(
+                          context: context,
+                          barrierDismissible: true, // user must tap button!
+                          builder: (BuildContext context) {
+                            return Card(
+
+                              margin: EdgeInsets.only(
+                                top: MediaQuery.of(context).size.height*0.56,
+                              ),
+                              child: Form(
+                                  key: _formKey,
+                                  child: Container(
+                                    margin: EdgeInsets.all(10),
+                                    child: ListView(
+                                      shrinkWrap: true,
+                                      children: [
+                                        Container(
+                                          alignment: Alignment.center,
+                                          margin: EdgeInsets.all(5),
+                                          child: Text(result.address,style: TextStyle(fontSize: 18,fontWeight: FontWeight.w700),textAlign: TextAlign.center,),
+                                        ),
+                                        TextFormField(
+                                          controller: areaController,
+                                          decoration: InputDecoration(
+                                              hintText: "Area"
+                                          ),
+                                          // The validator receives the text that the user has entered.
+                                          validator: (value) {
+                                            if (value.isEmpty) {
+                                              return 'Enter Area';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        SizedBox(height: 10,),
+                                        TextFormField(
+                                          controller: nameController,
+                                          decoration: InputDecoration(
+                                              hintText: "Building/Villa Name"
+                                          ),
+                                          // The validator receives the text that the user has entered.
+                                          validator: (value) {
+                                            if (value.isEmpty) {
+                                              return 'Enter Name';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        SizedBox(height: 10,),
+                                        TextFormField(
+                                          controller: numberController,
+                                          decoration: InputDecoration(
+                                              hintText: "Flat / Villa No"
+                                          ),
+                                          // The validator receives the text that the user has entered.
+                                          validator: (value) {
+                                            if (value.isEmpty) {
+                                              return 'Enter number';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        SizedBox(height: 10,),
+                                        Container(
+                                          padding:EdgeInsets.only(top: 10,bottom: 10,left: 30,right: 30),
+                                          height: 60,
+                                          width: MediaQuery.of(context).size.width,
+                                          child:  RaisedButton(
+                                            color: primaryColor,
+                                            onPressed: (){
+                                              if (_formKey.currentState.validate()) {
+                                                final databaseReference = FirebaseDatabase.instance.reference();
+                                                databaseReference.child("address").child(user.uid).push().set({
+                                                  'addressLine': "${numberController.text}, ${nameController.text}, ${result.address}",
+                                                  'area': areaController.text,
+                                                  'flatNo': numberController.text,
+                                                  'building': nameController.text,
+                                                  'lat': result.latLng.latitude,
+                                                  'long': result.latLng.longitude,
+
+
+                                                }).then((value) {
+                                                  Toast.show("Saved", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
+                                                  getUserAddress();
+                                                  Navigator.pop(context);
+                                                  setState(() {
+                                                    //locationContainer=
+                                                  });
+
+                                                })
+                                                    .catchError((error, stackTrace) {
+                                                  print("inner: $error");
+                                                  // although `throw SecondError()` has the same effect.
+                                                  return Toast.show("Error : $error", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
+                                                });
+                                              }
+                                            },
+                                            child: Text("Save Address",textAlign: TextAlign.center,style: TextStyle(color: Colors.white,fontWeight: FontWeight.w400,fontSize: 12),),
+                                          ),
+
+                                        ),
+
+                                      ],
+                                    ),
+                                  )
+                              ),
+                            );
+                          },
+                        );
+                      }
+                    },
+                    child: Text("Add Location",style: TextStyle(color: primaryColor),),
+                  ),
                 ),
               ),
             )

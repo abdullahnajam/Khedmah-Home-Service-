@@ -83,13 +83,13 @@ class _ServiceDetailState extends State<ServiceDetail> {
     await databaseReference.child("service").child(widget.serviceId).child("categories").child(widget.categoryId).child("servicesOffered")
         .child(widget.offeredServiceModel.id).child("servicelist").once().then((DataSnapshot dataSnapshot){
 
-      var KEYS= dataSnapshot.value.keys;
-      var DATA=dataSnapshot.value;
 
+      var DATA=dataSnapshot.value;
+      var KEYS= dataSnapshot.value.keys;
       for(var individualKey in KEYS){
         ServiceListModel serviceListModel = new ServiceListModel(
             individualKey,
-            DATA[individualKey]['price'],
+            int.parse(DATA[individualKey]['price']),
           DATA[individualKey]['title']
         );
         print("key ${serviceListModel.title}");
@@ -558,157 +558,164 @@ class _ServiceDetailState extends State<ServiceDetail> {
                           User user=await FirebaseAuth.instance.currentUser;
                           if(user!=null){
                             Navigator.push(context, new MaterialPageRoute(
-                                builder: (context) => ServiceFormDetail(price,selectedServicesList,widget.offeredServiceModel.id,widget.categoryId)));
+                                builder: (context) => ServiceFormDetail(widget.serviceId,price,selectedServicesList,widget.offeredServiceModel.id,widget.offeredServiceModel.name,widget.categoryId)));
                           }
                           else{
                             showDialog<void>(
                               context: context,
                               barrierDismissible: true, // user must tap button!
                               builder: (BuildContext context) {
-                                return Card(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: Radius.circular(30),
-                                        topRight: Radius.circular(30),
-                                      ),
-                                    ),
-                                    margin: EdgeInsets.only(
-                                      top: MediaQuery.of(context).size.height*0.7,
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Container(
-                                            padding:EdgeInsets.only(top: 10,left: 30,right: 30),
-                                            height: 100,
-                                            width: MediaQuery.of(context).size.width,
-                                            child:  Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Row(
+                                return StatefulBuilder(
+                                  builder: (context,setState){
+                                    return Card(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            20
+                                          ),
+                                        ),
+                                        margin: EdgeInsets.only(
+                                          top: MediaQuery.of(context).size.height*0.15,
+                                          bottom: MediaQuery.of(context).size.height*0.45,
+                                          left: MediaQuery.of(context).size.width*0.05,
+                                          right: MediaQuery.of(context).size.width*0.05,
+                                        ),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Container(
+                                                padding:EdgeInsets.only(top: 10,left: 30,right: 30),
+                                                height: 100,
+                                                width: MediaQuery.of(context).size.width,
+                                                child:  Column(
+                                                  mainAxisSize: MainAxisSize.min,
                                                   children: [
-                                                    FutureBuilder<List<CountryCodes>>(
-                                                      future: getCodes(),
-                                                      builder: (context,snapshot){
-                                                        if(snapshot.hasData){
-                                                          if(snapshot.data!=null && snapshot.data.length>0){
-                                                            return GestureDetector(
-                                                              onTap: (){
-                                                                showDialog<void>(
-                                                                  context: context,
-                                                                  barrierDismissible: true, // user must tap button!
-                                                                  builder: (BuildContext context) {
-                                                                    return Card(
+                                                    Row(
+                                                      children: [
+                                                        FutureBuilder<List<CountryCodes>>(
+                                                          future: getCodes(),
+                                                          builder: (context,snapshot){
+                                                            if(snapshot.hasData){
+                                                              if(snapshot.data!=null && snapshot.data.length>0){
+                                                                return GestureDetector(
+                                                                  onTap: (){
+                                                                    showDialog<void>(
+                                                                      context: context,
+                                                                      barrierDismissible: true, // user must tap button!
+                                                                      builder: (BuildContext context) {
+                                                                        return Card(
 
-                                                                      margin: EdgeInsets.only(
-                                                                        top: MediaQuery.of(context).size.height*0.1,
-                                                                        bottom: MediaQuery.of(context).size.height*0.1,
-                                                                        left: MediaQuery.of(context).size.width*0.1,
-                                                                        right: MediaQuery.of(context).size.width*0.1,
-                                                                      ),
-                                                                      child: Container(
-                                                                        padding: EdgeInsets.all(10),
-                                                                        child: ListView.builder(
-                                                                          itemCount: snapshot.data.length,
-                                                                          itemBuilder: (BuildContext context,int index){
-                                                                            return GestureDetector(
-                                                                              onTap: (){
-                                                                                setState(() {
-                                                                                  _countryCodes=snapshot.data[index];
-                                                                                  Navigator.pop(context);
-                                                                                });
-                                                                              },
-                                                                              child: Row(
-                                                                                children: [
-                                                                                  Expanded(
-                                                                                    flex: 3,
-                                                                                    child:  Row(
-                                                                                      children: [
-                                                                                        Image.network(snapshot.data[index].image,width: 30,height: 30,),
-                                                                                        SizedBox(width: 5,),
-                                                                                        Text(snapshot.data[index].code,style: TextStyle(fontSize: 18),),
-                                                                                      ],
-                                                                                    ),
+                                                                          margin: EdgeInsets.only(
+                                                                            top: MediaQuery.of(context).size.height*0.1,
+                                                                            bottom: MediaQuery.of(context).size.height*0.1,
+                                                                            left: MediaQuery.of(context).size.width*0.1,
+                                                                            right: MediaQuery.of(context).size.width*0.1,
+                                                                          ),
+                                                                          child: Container(
+                                                                            padding: EdgeInsets.all(10),
+                                                                            child: ListView.builder(
+                                                                              itemCount: snapshot.data.length,
+                                                                              itemBuilder: (BuildContext context,int index){
+                                                                                return GestureDetector(
+                                                                                  onTap: (){
+                                                                                    setState(() {
+                                                                                      _countryCodes=snapshot.data[index];
+                                                                                      Navigator.pop(context);
+                                                                                    });
+                                                                                  },
+                                                                                  child: Row(
+                                                                                    children: [
+                                                                                      Expanded(
+                                                                                        flex: 3,
+                                                                                        child:  Row(
+                                                                                          children: [
+                                                                                            Image.network(snapshot.data[index].image,width: 30,height: 30,),
+                                                                                            SizedBox(width: 5,),
+                                                                                            Text(snapshot.data[index].code,style: TextStyle(fontSize: 18),),
+                                                                                          ],
+                                                                                        ),
+                                                                                      ),
+                                                                                      Expanded(
+                                                                                        flex: 7,
+                                                                                        child:  Text(snapshot.data[index].name,style: TextStyle(fontSize: 18),),
+                                                                                      )
+
+                                                                                    ],
                                                                                   ),
-                                                                                  Expanded(
-                                                                                    flex: 7,
-                                                                                    child:  Text(snapshot.data[index].name,style: TextStyle(fontSize: 18),),
-                                                                                  )
-
-                                                                                ],
-                                                                              ),
-                                                                            );
-                                                                          },
-                                                                        ),
-                                                                      ),
+                                                                                );
+                                                                              },
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                      },
                                                                     );
                                                                   },
+                                                                  child: Row(
+                                                                    children: [
+                                                                      Image.network(_countryCodes.image,width: 30,height: 30,),
+                                                                      SizedBox(width: 5,),
+                                                                      Text(_countryCodes.code,style: TextStyle(fontSize: 18),)
+                                                                    ],
+                                                                  ),
                                                                 );
-                                                              },
-                                                              child: Row(
-                                                                children: [
-                                                                  Image.network(_countryCodes.image,width: 30,height: 30,),
-                                                                  SizedBox(width: 5,),
-                                                                  Text(_countryCodes.code,style: TextStyle(fontSize: 18),)
-                                                                ],
-                                                              ),
-                                                            );
-                                                          }
-                                                          else {
-                                                            return new Container(
-                                                              child: Center(
-                                                                  child: Icon(Icons.warning,color: primaryColor,)
-                                                              ),
-                                                            );
-                                                          }
-                                                        }
-                                                        else if (snapshot.hasError) {
-                                                          return Text('Error : ${snapshot.error}');
-                                                        } else {
-                                                          return new Center(
-                                                            child: CircularProgressIndicator(),
-                                                          );
-                                                        }
-                                                      },
-                                                    ),
-                                                    SizedBox(width: 10,),
-                                                    Expanded(
-                                                      child: TextFormField(
-                                                        controller: _phoneNumberController,
-                                                        decoration: InputDecoration(
-                                                          border: InputBorder.none,
-                                                          focusedBorder: InputBorder.none,
-                                                          enabledBorder: InputBorder.none,
-                                                          errorBorder: InputBorder.none,
-                                                          disabledBorder: InputBorder.none,
-                                                          labelStyle: TextStyle(color: Colors.grey[500],fontSize: 20),
-                                                          labelText: 'Enter Mobile Number',
+                                                              }
+                                                              else {
+                                                                return new Container(
+                                                                  child: Center(
+                                                                      child: Icon(Icons.warning,color: primaryColor,)
+                                                                  ),
+                                                                );
+                                                              }
+                                                            }
+                                                            else if (snapshot.hasError) {
+                                                              return Text('Error : ${snapshot.error}');
+                                                            } else {
+                                                              return new Center(
+                                                                child: CircularProgressIndicator(),
+                                                              );
+                                                            }
+                                                          },
                                                         ),
-                                                      ),
-                                                    )
+                                                        SizedBox(width: 10,),
+                                                        Expanded(
+                                                          child: TextFormField(
+                                                            controller: _phoneNumberController,
+                                                            decoration: InputDecoration(
+                                                              border: InputBorder.none,
+                                                              focusedBorder: InputBorder.none,
+                                                              enabledBorder: InputBorder.none,
+                                                              errorBorder: InputBorder.none,
+                                                              disabledBorder: InputBorder.none,
+                                                              labelStyle: TextStyle(color: Colors.grey[500],fontSize: 20),
+                                                              labelText: 'Enter Mobile Number',
+                                                            ),
+                                                          ),
+                                                        )
+                                                      ],
+                                                    ),
+                                                    Divider(color: Colors.grey,)
                                                   ],
-                                                ),
-                                                Divider(color: Colors.grey,)
-                                              ],
-                                            )
+                                                )
 
-                                        ),
-                                        Container(
-                                          padding:EdgeInsets.only(top: 10,bottom: 10,left: 30,right: 30),
-                                          height: 60,
-                                          width: MediaQuery.of(context).size.width,
-                                          child:  RaisedButton(
-                                            color: primaryColor,
-                                            onPressed: (){
-                                              String phoneNumber = "${_countryCodes.code}${_phoneNumberController.text}";
-                                              Navigator.of(context).push(MaterialPageRoute(
-                                                  builder: (context) => OTPScreen(_phoneNumberController.text,_countryCodes.code,_countryCodes.image)));
-                                            },
-                                            child: Text("Login / Sign Up",textAlign: TextAlign.center,style: TextStyle(color: Colors.white,fontWeight: FontWeight.w400,fontSize: 12),),
-                                          ),
+                                            ),
+                                            Container(
+                                              padding:EdgeInsets.only(top: 10,bottom: 10,left: 30,right: 30),
+                                              height: 60,
+                                              width: MediaQuery.of(context).size.width,
+                                              child:  RaisedButton(
+                                                color: primaryColor,
+                                                onPressed: (){
+                                                  String phoneNumber = "${_countryCodes.code}${_phoneNumberController.text}";
+                                                  Navigator.of(context).push(MaterialPageRoute(
+                                                      builder: (context) => OTPScreen(_phoneNumberController.text,_countryCodes.code,_countryCodes.image)));
+                                                },
+                                                child: Text("Login / Sign Up",textAlign: TextAlign.center,style: TextStyle(color: Colors.white,fontWeight: FontWeight.w400,fontSize: 12),),
+                                              ),
 
-                                        ),
-                                      ],
-                                    )
+                                            ),
+                                          ],
+                                        )
+                                    );
+                                  },
                                 );
                               },
                             );

@@ -28,11 +28,11 @@ class _NotificationsState extends State<Notifications> {
             ),
             child: Stack(
               children: [
-                Container(
+                /*Container(
                   margin: EdgeInsets.only(left: 15),
                   alignment: Alignment.centerLeft,
                   child: Icon(Icons.arrow_back,color: primaryColor,),
-                ),
+                ),*/
                 Container(
                   alignment: Alignment.center,
                   child: Text("Notifications",style: TextStyle(fontWeight: FontWeight.w700,fontSize: 13),),

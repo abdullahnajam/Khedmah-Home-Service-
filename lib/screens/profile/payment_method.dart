@@ -23,10 +23,13 @@ class _PaymentMethodState extends State<PaymentMethod> {
             ),
             child: Stack(
               children: [
-                Container(
-                  margin: EdgeInsets.only(left: 15),
-                  alignment: Alignment.centerLeft,
-                  child: Icon(Icons.arrow_back,color: primaryColor,),
+                GestureDetector(
+                  child: Container(
+                    margin: EdgeInsets.only(left: 15),
+                    alignment: Alignment.centerLeft,
+                    child: Icon(Icons.arrow_back,color: primaryColor,),
+                  ),
+                  onTap: ()=>Navigator.pop(context),
                 ),
                 Container(
                   alignment: Alignment.center,

@@ -103,10 +103,7 @@ class _SetUserInfoState extends State<SetUserInfo> {
                           'phoneNumber': widget.phoneNumber,
                           'countryCode': widget.flag
                         });
-                        Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (context) => BottomNavBar(widget.uid,true)),
-                                (route) => false);
+                        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => BottomNavBar(widget.uid,true)), (route) => false);
                       }
                     },
                     color: primaryColor,

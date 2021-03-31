@@ -50,43 +50,47 @@ class _CategoryListState extends State<CategoryList> {
   final databaseReference = FirebaseDatabase.instance.reference();
 
   Future<List<CategoryModel>> getCategories() async {
-    List<CategoryModel> list=new List();
+    List<CategoryModel> list=[];
     await databaseReference.child("service").child(widget.serviceId).child("categories").once().then((DataSnapshot dataSnapshot){
-
-      var KEYS= dataSnapshot.value.keys;
-      var DATA=dataSnapshot.value;
-
-      for(var individualKey in KEYS){
-        CategoryModel categoryModel = new CategoryModel(
-            individualKey,
-            DATA[individualKey]['name']
-        );
-        print("key ${categoryModel.id}");
-        list.add(categoryModel);
-
-
-
+      if(dataSnapshot.value!=null){
+        var KEYS= dataSnapshot.value.keys;
+        var DATA=dataSnapshot.value;
+        if(KEYS!=null){
+          for(var individualKey in KEYS){
+            CategoryModel categoryModel = new CategoryModel(
+                individualKey,
+                DATA[individualKey]['name']
+            );
+            print("key ${categoryModel.id}");
+            list.add(categoryModel);
+          }
+        }
       }
+
+
     });
     return list;
   }
   Future<List<OfferedServiceModel>> getOfferedSerivces(String id) async {
-    List<OfferedServiceModel> list=new List();
+    List<OfferedServiceModel> list=[];
     await databaseReference.child("service").child(widget.serviceId).child("categories").child(id).child("servicesOffered").once().then((DataSnapshot dataSnapshot){
-      var KEYS= dataSnapshot.value.keys;
-      var DATA=dataSnapshot.value;
+      if(dataSnapshot.value!=null){
+        var KEYS= dataSnapshot.value.keys;
+        var DATA=dataSnapshot.value;
 
-      for(var individualKey in KEYS){
-        OfferedServiceModel offeredServiceModel = new OfferedServiceModel(
+        for(var individualKey in KEYS){
+          OfferedServiceModel offeredServiceModel = new OfferedServiceModel(
             individualKey,
             DATA[individualKey]['name'],
-          DATA[individualKey]['rate'],
-          DATA[individualKey]['description'],
-          DATA[individualKey]['title'],
-          DATA[individualKey]['image'],
-        );
-        print("key ${offeredServiceModel.id}");
-        list.add(offeredServiceModel);
+            DATA[individualKey]['rate'],
+            DATA[individualKey]['description'],
+            DATA[individualKey]['title'],
+            DATA[individualKey]['image'],
+          );
+          print("key ${offeredServiceModel.id}");
+          list.add(offeredServiceModel);
+      }
+
 
 
 
@@ -276,7 +280,7 @@ class _CategoryListState extends State<CategoryList> {
                                       ],
                                     ),
                                   ),
-                                  Container(
+                                  snapshot.data[index].id!=null?Container(
                                       margin: EdgeInsets.only(left: 10,right: 10),
                                       child: FutureBuilder<List<OfferedServiceModel>>(
                                         future: getOfferedSerivces(snapshot.data[index].id),
@@ -354,7 +358,8 @@ class _CategoryListState extends State<CategoryList> {
                                           }
                                         },
                                       )
-                                  ),
+                                  ):
+                                  Container(),
                                 ],
                               )
                           );

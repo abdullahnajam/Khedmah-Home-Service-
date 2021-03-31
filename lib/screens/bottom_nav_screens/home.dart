@@ -325,6 +325,7 @@ class _HomeState extends State<Home> {
                                 },
                                 child: Container(
                                   width: 100,
+                                    margin: EdgeInsets.only(left:5,right: 5),
                                   decoration: BoxDecoration(
                                     color: Color(0xfff1f6fa),
                                     border: Border.all(color: backgroundColor),

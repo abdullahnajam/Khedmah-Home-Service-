@@ -1,13 +1,16 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_google_places/flutter_google_places.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_maps_place_picker/google_maps_place_picker.dart';
 import 'package:google_maps_webservice/places.dart';
 import '../../data/values.dart';
 import 'package:geocoder/geocoder.dart';
 import 'package:toast/toast.dart';
 import '../../model/address.dart';
+import 'package:google_map_location_picker/google_map_location_picker.dart';
 import 'package:firebase_database/firebase_database.dart';
-const kGoogleApiKey = "AIzaSyBhCef5WuAuPKRVoPuWQASD6avTs16x7uE";
+
 GoogleMapsPlaces _places = GoogleMapsPlaces(apiKey: kGoogleApiKey);
 class SavedAddress extends StatefulWidget {
   String uid;
@@ -18,182 +21,88 @@ class SavedAddress extends StatefulWidget {
   _SavedAddressState createState() => _SavedAddressState();
 }
 
-class _SavedAddressState extends State<SavedAddress> {
+class _SavedAddressState extends State<SavedAddress> with SingleTickerProviderStateMixin{
+  AnimationController _controller;
+  Animation _animation;
+
+  FocusNode _focusNode = FocusNode();
+  String lat,lng,address;
   final _formKey = GlobalKey<FormState>();
   final areaController=TextEditingController();
   final nameController=TextEditingController();
   final numberController=TextEditingController();
+
+  bool isEditable=false;
   final databaseReference = FirebaseDatabase.instance.reference();
   List<AddressModel> list=[];
+  String changeButtonName="Edit";
+
+  activateEditMode(){
+    setState(() {
+      changeButtonName="Save";
+      isEditable=true;
+    });
+  }
+  revertFromEditMode(){
+    setState(() {
+      changeButtonName="Edit";
+      isEditable=false;
+    });
+  }
+
   getUserAddress() async {
     print("uid ${widget.uid}");
+    //list.clear();
     await databaseReference.child("address").child(widget.uid).once().then((DataSnapshot dataSnapshot){
-      var KEYS= dataSnapshot.value.keys;
-      var DATA=dataSnapshot.value;
+      if(dataSnapshot!=null){
+        var KEYS= dataSnapshot.value.keys;
+        var DATA=dataSnapshot.value;
 
-      for(var individualKey in KEYS){
-        AddressModel addressModel = new AddressModel(
-            individualKey,
-            DATA[individualKey]['addressLine']
-        );
-        setState(() {
-          list.add(addressModel);
-        });
+        for(var individualKey in KEYS){
+          AddressModel addressModel = new AddressModel(
+              individualKey,
+              DATA[individualKey]['addressLine']
+          );
+          setState(() {
+            list.add(addressModel);
+          });
 
+        }
       }
     });
 
-
+    if(list.isEmpty){
+      list=[];
+    }
     return list;
+  }
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+
+    super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
     getUserAddress();
-  }
-
-  Future<void> _handlePressButton() async {
-    // show input autocomplete with selected mode
-    // then get the Prediction selected
-    Prediction p = await PlacesAutocomplete.show(
-      context: context,
-      apiKey: kGoogleApiKey,
-      onError: onError,
-      mode: Mode.overlay,
-      language: "fr",
-      //components: [Component(Component.country, "ue")],
-    );
-
-    displayPrediction(p);
-  }
-
-  Future<Null> displayPrediction(Prediction p) async {
-    if (p != null) {
-      // get detail (lat/lng)
-      PlacesDetailsResponse detail = await _places.getDetailsByPlaceId(p.placeId);
-
-      final lat = detail.result.geometry.location.lat;
-      final lng = detail.result.geometry.location.lng;
-
-
-      final coordinates = new Coordinates(1.10, 45.50);
-      var addresses = await Geocoder.local.findAddressesFromCoordinates(coordinates);
-      Address first = addresses.first;
-
-
-      final address=detail.result.formattedAddress;
-      showDialog<void>(
-        context: context,
-        barrierDismissible: true, // user must tap button!
-        builder: (BuildContext context) {
-          return Card(
-
-            margin: EdgeInsets.only(
-              top: MediaQuery.of(context).size.height*0.56,
-            ),
-            child: Form(
-                key: _formKey,
-                child: Container(
-                  margin: EdgeInsets.all(10),
-                    child: ListView(
-                      shrinkWrap: true,
-                      children: [
-                        Container(
-                          alignment: Alignment.center,
-                          margin: EdgeInsets.all(5),
-                          child: Text(address,style: TextStyle(fontSize: 18,fontWeight: FontWeight.w700),textAlign: TextAlign.center,),
-                        ),
-                        TextFormField(
-                          controller: areaController,
-                          decoration: InputDecoration(
-                              hintText: "Area"
-                          ),
-                          // The validator receives the text that the user has entered.
-                          validator: (value) {
-                            if (value.isEmpty) {
-                              return 'Enter Area';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 10,),
-                        TextFormField(
-                          controller: nameController,
-                          decoration: InputDecoration(
-                              hintText: "Building/Villa Name"
-                          ),
-                          // The validator receives the text that the user has entered.
-                          validator: (value) {
-                            if (value.isEmpty) {
-                              return 'Enter Name';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 10,),
-                        TextFormField(
-                          controller: numberController,
-                          decoration: InputDecoration(
-                              hintText: "Flat / Villa No"
-                          ),
-                          // The validator receives the text that the user has entered.
-                          validator: (value) {
-                            if (value.isEmpty) {
-                              return 'Enter number';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 10,),
-                        Container(
-                          padding:EdgeInsets.only(top: 10,bottom: 10,left: 30,right: 30),
-                          height: 60,
-                          width: MediaQuery.of(context).size.width,
-                          child:  RaisedButton(
-                            color: primaryColor,
-                            onPressed: (){
-                              if (_formKey.currentState.validate()) {
-                                final databaseReference = FirebaseDatabase.instance.reference();
-                                databaseReference.child("address").child(widget.uid).push().set({
-                                  'addressLine': "${numberController.text}, ${nameController.text}, ${areaController.text}, $address",
-                                  'area': areaController.text,
-                                  'flatNo': numberController.text,
-                                  'building': nameController.text,
-                                  'lat': lat,
-                                  'long': lng,
-
-
-                                }).then((value) => Toast.show("Saved", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP))
-                                    .catchError((error, stackTrace) {
-                                  print("inner: $error");
-                                  // although `throw SecondError()` has the same effect.
-                                  return Toast.show("Error : $error", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
-                                });
-                              }
-                            },
-                            child: Text("Save Address",textAlign: TextAlign.center,style: TextStyle(color: Colors.white,fontWeight: FontWeight.w400,fontSize: 12),),
-                          ),
-
-                        ),
-
-                      ],
-                    ),
-                )
-            ),
-          );
-        },
-      );
-      setState(() {
-        //availabilityController.text=address;
+    _controller = AnimationController(vsync: this, duration: Duration(milliseconds: 300));
+    _animation = Tween(begin: 300.0, end: 50.0).animate(_controller)
+      ..addListener(() {
+        setState(() {});
       });
 
-
-    }
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    });
   }
-  void onError(PlacesAutocompleteResponse response) {
 
-  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -210,19 +119,32 @@ class _SavedAddressState extends State<SavedAddress> {
             ),
             child: Stack(
               children: [
-                Container(
-                  margin: EdgeInsets.only(left: 15),
-                  alignment: Alignment.centerLeft,
-                  child: Icon(Icons.arrow_back,color: primaryColor,),
+                GestureDetector(
+                  child: Container(
+                    margin: EdgeInsets.only(left: 15),
+                    alignment: Alignment.centerLeft,
+                    child: Icon(Icons.arrow_back,color: primaryColor,),
+                  ),
+                  onTap: ()=>Navigator.pop(context)
                 ),
                 Container(
                   alignment: Alignment.center,
                   child: Text("Saved Address",style: TextStyle(fontWeight: FontWeight.w700,fontSize: 13),),
                 ),
-                Container(
-                  margin: EdgeInsets.only(right: 15),
-                  alignment: Alignment.centerRight,
-                  child: Text("Edit",style: TextStyle(fontWeight: FontWeight.w400,fontSize: 14,color: primaryColor),),
+                GestureDetector(
+                  onTap: (){
+                    if(changeButtonName=="Edit"){
+                      activateEditMode();
+                    }
+                    else{
+                      revertFromEditMode();
+                    }
+                  },
+                  child: Container(
+                    margin: EdgeInsets.only(right: 15),
+                    alignment: Alignment.centerRight,
+                    child: Text(changeButtonName,style: TextStyle(fontWeight: FontWeight.w400,fontSize: 14,color: primaryColor),),
+                  ),
                 )
 
               ],
@@ -240,6 +162,30 @@ class _SavedAddressState extends State<SavedAddress> {
                     Icon(Icons.place,color: primaryColor,),
                     Expanded(
                       child: Text(list[index].addressLine),
+                    ),
+                    AnimatedContainer(
+                        duration: const Duration(seconds: 1),
+                        curve: Curves.fastOutSlowIn,
+                      width: isEditable?50:0,
+                      child:  GestureDetector(
+                        child: Container(
+                          margin: EdgeInsets.only(right: 20),
+                          child: Icon(Icons.delete_forever_outlined,color: Colors.red,size: 27,),
+                        ),
+                        onTap: (){
+                          FirebaseDatabase.instance.reference()
+                              .child('address')
+                              .child(widget.uid)
+                              .child(list[index].id)
+                              .remove().then((value){
+                               setState(() {
+                                 list.removeAt(index);
+                                 revertFromEditMode();
+                               });
+                          });
+                        },
+                      )
+
                     )
                   ],
                 ),
@@ -248,8 +194,130 @@ class _SavedAddressState extends State<SavedAddress> {
           ),
           SizedBox(height: 20,),
           GestureDetector(
-            onTap: (){
-              _handlePressButton();
+            onTap: ()async{
+              LocationResult result = await showLocationPicker(
+                context,
+                kGoogleApiKey,
+
+              );
+              print("result = ${result}");
+              if(result!=null){
+                showDialog<void>(
+                  context: context,
+                  barrierDismissible: true, // user must tap button!
+                  builder: (BuildContext context) {
+                    return StatefulBuilder(
+                      builder: (context,setState){
+                        return Card(
+                          margin: EdgeInsets.only(
+                            top: MediaQuery.of(context).size.height*0.15,
+                            bottom: MediaQuery.of(context).size.height*0.35,
+                            left: MediaQuery.of(context).size.height*0.02,
+                            right: MediaQuery.of(context).size.height*0.02,
+                          ),
+                          child: Scaffold(
+                            resizeToAvoidBottomPadding: false,
+                            body: Form(
+                                key: _formKey,
+                                child: Container(
+                                  margin: EdgeInsets.all(10),
+                                  child: ListView(
+                                    shrinkWrap: true,
+                                    children: [
+                                      Container(
+                                        alignment: Alignment.center,
+                                        margin: EdgeInsets.all(5),
+                                        child: Text(result.address,style: TextStyle(fontSize: 18,fontWeight: FontWeight.w700),textAlign: TextAlign.center,),
+                                      ),
+                                      TextFormField(
+
+                                        controller: areaController,
+                                        decoration: InputDecoration(
+                                            hintText: "Area"
+                                        ),
+                                        // The validator receives the text that the user has entered.
+                                        validator: (value) {
+                                          if (value.isEmpty) {
+                                            return 'Enter Area';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      SizedBox(height: 10,),
+                                      TextFormField(
+                                        controller: nameController,
+                                        decoration: InputDecoration(
+                                            hintText: "Building/Villa Name"
+                                        ),
+                                        // The validator receives the text that the user has entered.
+                                        validator: (value) {
+                                          if (value.isEmpty) {
+                                            return 'Enter Name';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      SizedBox(height: 10,),
+                                      TextFormField(
+                                        controller: numberController,
+                                        decoration: InputDecoration(
+                                            hintText: "Flat / Villa No"
+                                        ),
+                                        // The validator receives the text that the user has entered.
+                                        validator: (value) {
+                                          if (value.isEmpty) {
+                                            return 'Enter number';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      SizedBox(height: 10,),
+                                      Container(
+                                        padding:EdgeInsets.only(top: 10,bottom: 10,left: 30,right: 30),
+                                        height: 60,
+                                        width: MediaQuery.of(context).size.width,
+                                        child:  RaisedButton(
+                                          color: primaryColor,
+                                          onPressed: (){
+                                            if (_formKey.currentState.validate()) {
+                                              final databaseReference = FirebaseDatabase.instance.reference();
+                                              databaseReference.child("address").child(widget.uid).push().set({
+                                                'addressLine': "${numberController.text}, ${nameController.text}, ${result.address}",
+                                                'area': areaController.text,
+                                                'flatNo': numberController.text,
+                                                'building': nameController.text,
+                                                'lat': result.latLng.latitude,
+                                                'long': result.latLng.longitude,
+
+
+                                              }).then((value) {
+                                                Toast.show("Saved", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
+                                                Navigator.pushReplacement(context, new MaterialPageRoute(
+                                                    builder: (context) => SavedAddress(widget.uid)));
+                                              })
+                                                  .catchError((error, stackTrace) {
+                                                print("inner: $error");
+                                                // although `throw SecondError()` has the same effect.
+                                                return Toast.show("Error : $error", context, duration: Toast.LENGTH_LONG, gravity:  Toast.TOP);
+                                              });
+                                            }
+                                          },
+                                          child: Text("Save Address",textAlign: TextAlign.center,style: TextStyle(color: Colors.white,fontWeight: FontWeight.w400,fontSize: 12),),
+                                        ),
+
+                                      ),
+
+                                    ],
+                                  ),
+                                )
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              }
             },
             child: Container(
               height: 40,
