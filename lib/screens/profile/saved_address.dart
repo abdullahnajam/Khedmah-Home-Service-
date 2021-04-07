@@ -216,7 +216,6 @@ class _SavedAddressState extends State<SavedAddress> with SingleTickerProviderSt
                             right: MediaQuery.of(context).size.height*0.02,
                           ),
                           child: Scaffold(
-                            resizeToAvoidBottomPadding: false,
                             body: Form(
                                 key: _formKey,
                                 child: Container(
