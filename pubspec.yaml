@@ -48,7 +48,11 @@ dependencies:
   google_maps_place_picker: any
   latlng: any
   google_maps_flutter: ^0.5.30
+  webview_flutter: ^1.0.0
   google_map_location_picker: ^3.3.0
+  dio: ^3.0.10
+  js: ^0.6.2
+  stripe_payment: ^1.0.6
 
 dev_dependencies:
   flutter_launcher_icons: "^0.8.0"

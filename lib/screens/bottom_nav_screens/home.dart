@@ -42,16 +42,6 @@ class _HomeState extends State<Home> {
 
 
       }
-
-      //var KEYS= dataSnapshot.value.keys;
-      /*for(var value in dataSnapshot.value.values) {
-        Offer offer=Offer.fromJson(value);
-        //add id in offer
-        var data=KEYS[0];
-        offer.id=data;
-        print(offer.id);
-        list.add(offer);
-      }*/
     });
     return list;
   }
