@@ -1,6 +1,6 @@
-# rizek
+# khedmah
 
-A new Flutter application.
+A home services/booking app specially desinged for the booking of COVID-19 vaccines
 
 ## Getting Started
 
